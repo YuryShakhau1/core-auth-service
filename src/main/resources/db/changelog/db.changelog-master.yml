@@ -4,4 +4,8 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/202607240002_create_roles.sql
   - include:
+      file: db/changelog/changes/202607240003_create_user_roles.sql
+  - include:
+      file: db/changelog/changes/202607240004_insert_default_roles.sql
+  - include:
       file: db/changelog/changes/202607240005_create_refresh_tokens.sql
