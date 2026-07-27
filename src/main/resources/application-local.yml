@@ -1,9 +1,19 @@
+server:
+  port: ${AUTH_SERVICE_PORT:8081}
+
 spring:
   config:
     activate:
       on-profile: local
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/${DB_NAME:auth_db}
-    username: ${DB_USERNAME:db_username}
-    password: ${DB_PASSWORD:db_password}
+    url: jdbc:postgresql://localhost:${AUTH_SERVICE_DB_PORT}/${AUTH_SERVICE_DB_NAME:auth_db}
+    username: ${AUTH_SERVICE_DB_USERNAME:db_username}
+    password: ${AUTH_SERVICE_DB_PASSWORD:db_password}
+
+  kafka:
+    producer:
+      properties:
+        max.block.ms: 5000
+        delivery.timeout.ms: 14000
+        request.timeout.ms: 7000

@@ -1,9 +1,19 @@
+server:
+  port: ${AUTH_SERVICE_PORT}
+
 spring:
   config:
     activate:
       on-profile: docker
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/${DB_NAME}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: jdbc:postgresql://localhost:${AUTH_SERVICE_DB_PORT}/${DB_NAME}
+    username: ${AUTH_SERVICE_DB_USERNAME}
+    password: ${AUTH_SERVICE_DB_PASSWORD}
+
+  kafka:
+    producer:
+      properties:
+        max.block.ms: 5000
+        delivery.timeout.ms: 14000
+        request.timeout.ms: 7000
