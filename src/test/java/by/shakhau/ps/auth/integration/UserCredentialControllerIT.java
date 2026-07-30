@@ -66,7 +66,7 @@ class UserCredentialControllerIT extends AbstractIntegrationTest {
                                 AUTHORIZATION_HEADER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.email")
                         .value("petr@test.com"));
     }
@@ -90,7 +90,7 @@ class UserCredentialControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(post("/auth/users/create-admin")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.email")
                         .value("admin@test.com"));
     }

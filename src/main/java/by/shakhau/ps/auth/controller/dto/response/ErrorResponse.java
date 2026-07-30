@@ -6,7 +6,7 @@ import lombok.Builder;
 import java.time.LocalDateTime;
 
 @Builder
-@JsonInclude(JsonInclude.Include.NON_EMPTY) // Скроет поле errors, если оно пустое
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public record ErrorResponse(
     LocalDateTime timestamp,
     int status,

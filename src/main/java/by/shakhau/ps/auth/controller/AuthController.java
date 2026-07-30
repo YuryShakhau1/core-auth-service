@@ -4,25 +4,28 @@ import by.shakhau.ps.auth.config.SecurityProps;
 import by.shakhau.ps.auth.controller.dto.request.LoginRequest;
 import by.shakhau.ps.auth.controller.dto.request.RefreshTokenRequest;
 import by.shakhau.ps.auth.controller.dto.response.TokenResponse;
+import by.shakhau.ps.auth.controller.dto.response.TokenValidResponse;
 import by.shakhau.ps.auth.controller.exception.UnauthorizedException;
+import by.shakhau.ps.auth.controller.filter.JwtAuthenticationFilter.UserPrincipal;
 import by.shakhau.ps.auth.model.RefreshToken;
 import by.shakhau.ps.auth.model.UserShortCredential;
 import by.shakhau.ps.auth.service.RefreshTokenService;
 import by.shakhau.ps.auth.service.UserCredentialService;
 import by.shakhau.ps.auth.service.exception.ResourceForbiddenException;
 import by.shakhau.ps.auth.service.impl.JwtService;
+import by.shakhau.ps.auth.service.impl.JwtService.TokenInfo;
 import by.shakhau.ps.auth.util.PasswordUtil;
 import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -60,14 +63,14 @@ public class AuthController {
         UUID userId = userCredential.getUserId();
         PasswordUtil.clearPassword(request, password);
 
-        String accessToken = jwtService.generateAccessToken(userId);
-        String refreshToken = jwtService.generateRefreshToken(userId, null);
+        TokenInfo accessToken = jwtService.generateAccessToken(userId);
+        String refreshToken = jwtService.generateRefreshToken(userId, accessToken.getSessionId());
 
         refreshTokenService.save(userId, refreshToken);
 
         deleteSessionOutOfLimit(userId);
 
-        return ResponseEntity.ok(new TokenResponse(accessToken, refreshToken));
+        return ResponseEntity.ok(new TokenResponse(accessToken.getToken(), refreshToken));
     }
 
     @PostMapping("/token/refresh")
@@ -91,35 +94,29 @@ public class AuthController {
             throw new UnauthorizedException("Refresh token %s is not valid".formatted(refreshToken));
         }
 
-        String generatedAccessToken = jwtService.generateAccessToken(userId);
-        String generatedRefreshToken = jwtService.generateRefreshToken(userId, sessionId.toString());
+        var sId = sessionId.toString();
+        TokenInfo generatedAccessToken = jwtService.generateAccessToken(userId, sId);
+        String generatedRefreshToken = jwtService.generateRefreshToken(userId, sId);
 
         refreshTokenService.updateToken(userId, sessionId, generatedRefreshToken);
 
-        return ResponseEntity.ok(new TokenResponse(generatedAccessToken, generatedRefreshToken));
+        return ResponseEntity.ok(new TokenResponse(generatedAccessToken.getToken(), generatedRefreshToken));
     }
 
-    @PostMapping(value = "/token/{token}/valid")
-    public ResponseEntity<Boolean> tokenValid(@PathVariable String token) {
-        return ResponseEntity.ok(jwtService.isTokenValid(token));
+    @GetMapping(value = "/token/{token}/valid")
+    public ResponseEntity<TokenValidResponse> tokenValid(@PathVariable String token) {
+        return ResponseEntity.ok(new TokenValidResponse(jwtService.isTokenValid(token)));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestHeader("Authorization") String authHeader) {
-        String accessToken = authHeader.substring("Bearer ".length());
-        Claims claims = jwtService.getClaims(accessToken);
-        UUID userId = UUID.fromString(claims.getSubject());
-        UUID sessionId = UUID.fromString((String) claims.get("session_id"));
-        refreshTokenService.deleteByUserIdAndSessionId(userId, sessionId);
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal UserPrincipal principal) {
+        refreshTokenService.deleteByUserIdAndSessionId(principal.getId(), principal.getSessionId());
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/logout/all")
-    public ResponseEntity<Void> logoutAll(@RequestHeader("Authorization") String authHeader) {
-        String accessToken = authHeader.substring("Bearer ".length());
-        Claims claims = jwtService.getClaims(accessToken);
-        UUID userId = UUID.fromString(claims.getSubject());
-        refreshTokenService.deleteByUserId(userId);
+    public ResponseEntity<Void> logoutAll(@AuthenticationPrincipal UserPrincipal principal) {
+        refreshTokenService.deleteByUserId(principal.getId());
         return ResponseEntity.noContent().build();
     }
 

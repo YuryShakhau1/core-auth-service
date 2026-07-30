@@ -8,6 +8,8 @@ import by.shakhau.ps.auth.controller.dto.response.UserResponse;
 import by.shakhau.ps.auth.controller.dto.response.UserRoleNameResponse;
 import by.shakhau.ps.auth.controller.exception.CustomValidationException;
 import by.shakhau.ps.auth.controller.exception.UnauthorizedException;
+import by.shakhau.ps.auth.controller.filter.JwtAuthenticationFilter;
+import by.shakhau.ps.auth.controller.filter.JwtAuthenticationFilter.UserPrincipal;
 import by.shakhau.ps.auth.mapper.UserCredentialMapper;
 import by.shakhau.ps.auth.model.UserCredential;
 import by.shakhau.ps.auth.model.UserShortCredential;
@@ -21,7 +23,9 @@ import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -50,20 +54,24 @@ public class UserCredentialController {
     private final SecurityProps securityProps;
 
     @GetMapping(value = "/me", produces = APPLICATION_JSON_VALUE)
-    public ResponseEntity<UserResponse> findCurrentUser(@RequestHeader("Authorization") String authHeader) {
-        String accessToken = authHeader.substring("Bearer ".length());
-        Claims claims = jwtService.getClaims(accessToken);
-        UUID userId = UUID.fromString(claims.getSubject());
+    public ResponseEntity<UserResponse> findCurrentUser(@AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            throw new UnauthorizedException("User not found");
+        }
+
+        UUID userId = principal.getId();
         UserCredential userCredential = service.findByUserId(userId);
         return ResponseEntity.ok(mapper.toGetUserResponse(userCredential));
     }
 
     @GetMapping(value = "/me/roles", produces = APPLICATION_JSON_VALUE)
     public ResponseEntity<UserRoleNameResponse> findCurrentUserRoles(
-            @RequestHeader("Authorization") String authHeader) {
-        String accessToken = authHeader.substring("Bearer ".length());
-        Claims claims = jwtService.getClaims(accessToken);
-        UUID userId = UUID.fromString(claims.getSubject());
+            @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            throw new UnauthorizedException("User not found");
+        }
+
+        UUID userId = principal.getId();
         return ResponseEntity.ok(new UserRoleNameResponse(userRoleService.findUserRoles(userId)));
     }
 
@@ -83,11 +91,11 @@ public class UserCredentialController {
 
     @PatchMapping(value = "/change-password", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
-        if (!request.getPassword().toString().contentEquals(request.getRepeatPassword())) {
+        if (!PasswordUtil.compare(request.getPassword(), request.getRepeatPassword())) {
             throw new CustomValidationException("Password and repeat password must match");
         }
 
-        if (request.getPassword().toString().contentEquals(request.getNewPassword())) {
+        if (PasswordUtil.compare(request.getPassword(), request.getNewPassword())) {
             throw new CustomValidationException("Password and new password must be different");
         }
 
@@ -110,7 +118,7 @@ public class UserCredentialController {
     }
 
     private ResponseEntity<UserResponse> createUser(CreateUserRequest request, String role) {
-        if (!request.getPassword().toString().contentEquals(request.getRepeatPassword())) {
+        if (!PasswordUtil.compare(request.getPassword(), request.getRepeatPassword())) {
             throw new CustomValidationException("Password and repeat password must match");
         }
 
@@ -121,6 +129,6 @@ public class UserCredentialController {
         UserCredential userCredential = service.registerUser(userInfo, role);
         PasswordUtil.clearPassword(request);
 
-        return ResponseEntity.ok(mapper.toGetUserResponse(userCredential));
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toGetUserResponse(userCredential));
     }
 }

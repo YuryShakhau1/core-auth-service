@@ -46,7 +46,9 @@ import static org.mockito.Mockito.when;
 public abstract class AbstractIntegrationTest {
 
     protected static final String AUTHORIZATION_HEADER = "Bearer 123";
+    protected static final String PUBLIC_KEY = UUID.randomUUID().toString();
     protected static final String USER_ID = UUID.randomUUID().toString();
+    protected static final String SESSION_ID = UUID.randomUUID().toString();
     protected static final String ADMIN_SECRET = UUID.randomUUID().toString();
     protected static final String ADMIN_SECRET_HASH = DigestUtils.sha256Hex(ADMIN_SECRET);
 
@@ -111,8 +113,10 @@ public abstract class AbstractIntegrationTest {
 
         when(claims.getExpiration()).thenReturn(new Date(System.currentTimeMillis() + 1000000));
         when(claims.getSubject()).thenReturn(USER_ID);
+        when(claims.get("session_id")).thenReturn(SESSION_ID);
         when((List<String>) claims.get("roles")).thenReturn(Collections.singletonList("ROLE_ADMIN"));
         when(jwtService.getClaims(any())).thenReturn(claims);
+        when(jwtService.getPublicKeyAsString()).thenReturn(PUBLIC_KEY);
 
         when(securityProps.getAdminInitSecretHash()).thenReturn(ADMIN_SECRET_HASH);
         when(securityProps.getMaxSessionCount()).thenReturn(5);

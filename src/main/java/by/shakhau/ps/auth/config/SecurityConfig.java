@@ -35,18 +35,21 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/auth/login",
-                                "/auth/users/me",
-                                "/auth/roles").permitAll()
+                                "/auth/public-key",
+                                "/auth/users/me").permitAll()
                         .requestMatchers(HttpMethod.GET, "/auth/roles/users/me").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/auth/roles/users/**").hasRole("ADMIN")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/auth/roles",
+                                "/auth/roles/users/**").hasRole("ADMIN")
                         .requestMatchers("/auth/token/**").permitAll()
                         .requestMatchers(
                                 HttpMethod.POST,
+                                "/auth/users",
                                 "/auth/users/create-admin").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/auth/users/change-password").permitAll()
                         .requestMatchers("/auth/users/**", "/auth/users").hasRole("ADMIN")
                         .anyRequest().authenticated())
-                .httpBasic(Customizer.withDefaults())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

@@ -4,6 +4,7 @@ import by.shakhau.ps.auth.controller.dto.request.LoginRequest;
 import by.shakhau.ps.auth.controller.dto.request.RefreshTokenRequest;
 import by.shakhau.ps.auth.model.UserCredential;
 import by.shakhau.ps.auth.service.RefreshTokenService;
+import by.shakhau.ps.auth.service.impl.JwtService.TokenInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -15,13 +16,12 @@ import org.testcontainers.shaded.com.google.common.net.HttpHeaders;
 
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -37,8 +37,9 @@ class AuthControllerIT extends AbstractIntegrationTest {
     void shouldLogin() throws Exception {
         UserCredential user = createUser();
 
-        when(jwtService.generateAccessToken(user.getUserId())).thenReturn("access-token");
-        when(jwtService.generateRefreshToken(eq(user.getUserId()), isNull()))
+        when(jwtService.generateAccessToken(user.getUserId())).thenReturn(
+                new TokenInfo("access-token", UUID.randomUUID().toString()));
+        when(jwtService.generateRefreshToken(eq(user.getUserId()), any()))
                 .thenReturn("refresh-token");
 
         LoginRequest request = new LoginRequest(
@@ -49,8 +50,8 @@ class AuthControllerIT extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.access_token").value("access-token"))
-                .andExpect(jsonPath("$.refresh_token").value("refresh-token"));
+                .andExpect(jsonPath("$.accessToken").value("access-token"))
+                .andExpect(jsonPath("$.refreshToken").value("refresh-token"));
 
         verify(refreshTokenService).save(user.getUserId(), "refresh-token");
     }
@@ -81,17 +82,18 @@ class AuthControllerIT extends AbstractIntegrationTest {
 
         when(refreshTokenService.findTokenHashByUserIdAndSessionId(userId, sessionId))
                 .thenReturn(DigestUtils.sha256Hex("refresh-token"));
-        when(jwtService.generateAccessToken(userId)).thenReturn("new-access");
+        when(jwtService.generateAccessToken(userId, sessionId.toString())).thenReturn(
+                new TokenInfo("new-access", sessionId.toString()));
         when(jwtService.generateRefreshToken(userId, sessionId.toString())).thenReturn("new-refresh");
 
-        RefreshTokenRequest request = new RefreshTokenRequest("refresh-token");
+        var request = new RefreshTokenRequest("refresh-token");
 
         mockMvc.perform(post("/auth/token/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.access_token").value("new-access"))
-                .andExpect(jsonPath("$.refresh_token").value("new-refresh"));
+                .andExpect(jsonPath("$.accessToken").value("new-access"))
+                .andExpect(jsonPath("$.refreshToken").value("new-refresh"));
 
         verify(refreshTokenService)
                 .updateToken(userId, sessionId, "new-refresh");
@@ -101,9 +103,9 @@ class AuthControllerIT extends AbstractIntegrationTest {
     void shouldValidateToken() throws Exception {
         when(jwtService.isTokenValid("token")).thenReturn(true);
 
-        mockMvc.perform(post("/auth/token/{token}/valid", "token"))
+        mockMvc.perform(get("/auth/token/{token}/valid", "token"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("true"));
+                .andExpect(jsonPath("$.valid").value("true"));
     }
 
     @Test

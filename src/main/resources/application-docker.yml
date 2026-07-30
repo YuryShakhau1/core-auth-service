@@ -7,7 +7,7 @@ spring:
       on-profile: docker
 
   datasource:
-    url: jdbc:postgresql://localhost:${AUTH_SERVICE_DB_PORT}/${DB_NAME}
+    url: jdbc:postgresql://postgres:${AUTH_SERVICE_DB_PORT}/${AUTH_SERVICE_DB_NAME}
     username: ${AUTH_SERVICE_DB_USERNAME}
     password: ${AUTH_SERVICE_DB_PASSWORD}
 
@@ -17,3 +17,7 @@ spring:
         max.block.ms: 5000
         delivery.timeout.ms: 14000
         request.timeout.ms: 7000
+
+logging:
+  level:
+    root: INFO

@@ -1,4 +1,7 @@
 spring:
+  profiles:
+    active: test
+
   datasource:
     driver-class-name: org.postgresql.Driver
 
@@ -13,7 +16,7 @@ spring:
     redis:
       host: localhost
       port: 6379
-      password: ${REDIS_SECRET_PASSWORD}
+      password: ${REDIS_SECRET_PASSWORD:redis_password}
 
   liquibase:
     change-log: classpath:/db/changelog/db.changelog-master.yml
@@ -24,10 +27,10 @@ spring:
     access-expiration: 900
     refresh-expiration: 86400
     max-session-count: 5
-    admin-init-secret: ${ADMIN_INIT_SECRET}
+    admin-init-secret: ${ADMIN_INIT_SECRET:Admin_init_secret}
 
   kafka:
-    bootstrap-servers: ${KAFKA_HOST_POST}
+    bootstrap-servers: ${KAFKA_HOST_POST:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -39,4 +42,4 @@ spring:
       immediate-stop: true
 
   config:
-    import: optional:file:../.env[.properties]
+    import: optional:file:.env[.properties]

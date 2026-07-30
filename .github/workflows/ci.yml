@@ -42,7 +42,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        run: ./gradlew sonar --info
+        run: ./gradlew sonar -Dsonar.host.url=https://sonarcloud.io -Dsonar.organization=yuryshakhau1 --info
 
   docker-artifact:
     name: Create and Push Docker Image Artifact

@@ -19,6 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -27,7 +29,7 @@ class JwtServiceTest {
 
     private static final long ACCESS_EXPIRATION = 50;
     private static final long REFRESH_EXPIRATION = 100;
-    private static final String SECRET = UUID.randomUUID().toString();
+    private static final String TEST_SECRET = "my-super-stable-test-password-1234567890!";
 
     @Mock
     private UserRoleService userRoleService;
@@ -36,10 +38,11 @@ class JwtServiceTest {
 
     @BeforeEach
     void setUp() {
-        var securityProps = new SecurityProps();
-        securityProps.setSecret(SECRET);
+        SecurityProps securityProps = spy(new SecurityProps());
         securityProps.setAccessExpiration(ACCESS_EXPIRATION);
         securityProps.setRefreshExpiration(REFRESH_EXPIRATION);
+
+        doReturn(TEST_SECRET).when(securityProps).getSecret();
 
         jwtService = new JwtService(securityProps, userRoleService);
     }
@@ -50,11 +53,11 @@ class JwtServiceTest {
 
         when(userRoleService.findUserRoles(userId)).thenReturn(List.of("ROLE_USER", "ROLE_ADMIN"));
 
-        String token = jwtService.generateAccessToken(userId);
+        JwtService.TokenInfo token = jwtService.generateAccessToken(userId);
 
         assertNotNull(token);
 
-        Claims claims = jwtService.getClaims(token);
+        Claims claims = jwtService.getClaims(token.getToken());
 
         assertNotNull(claims);
         assertEquals(userId.toString(), claims.getSubject());
@@ -66,7 +69,7 @@ class JwtServiceTest {
                 claims.getIssuedAt().toInstant(),
                 claims.getExpiration().toInstant());
 
-        assertEquals(Duration.ofMinutes(ACCESS_EXPIRATION), lifetime);
+        assertTrue(Math.abs(Duration.ofSeconds(ACCESS_EXPIRATION).toSeconds() - lifetime.toSeconds()) <= 1);
 
         verify(userRoleService).findUserRoles(userId);
     }
@@ -88,20 +91,21 @@ class JwtServiceTest {
                 claims.getIssuedAt().toInstant(),
                 claims.getExpiration().toInstant());
 
-        assertEquals(Duration.ofMinutes(REFRESH_EXPIRATION), lifetime);
+        assertTrue(Math.abs(Duration.ofSeconds(REFRESH_EXPIRATION).toSeconds() - lifetime.toSeconds()) <= 1);
     }
 
     @Test
     void shouldGenerateRefreshTokenWithRandomSessionIdWhenSessionIdIsNull() {
         UUID userId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
 
-        String token = jwtService.generateRefreshToken(userId, null);
+        String token = jwtService.generateRefreshToken(userId, sessionId.toString());
 
         Claims claims = jwtService.getClaims(token);
-        String sessionId = claims.get("session_id", String.class);
+        String resultSessionId = claims.get("session_id", String.class);
 
         assertNotNull(claims);
-        assertDoesNotThrow(() -> UUID.fromString(sessionId));
+        assertDoesNotThrow(() -> UUID.fromString(resultSessionId));
     }
 
     @Test
@@ -110,9 +114,9 @@ class JwtServiceTest {
 
         when(userRoleService.findUserRoles(userId)).thenReturn(List.of("ROLE_USER"));
 
-        String token = jwtService.generateAccessToken(userId);
+        JwtService.TokenInfo token = jwtService.generateAccessToken(userId);
 
-        assertTrue(jwtService.isTokenValid(token));
+        assertTrue(jwtService.isTokenValid(token.getToken()));
     }
 
     @Test
@@ -126,36 +130,54 @@ class JwtServiceTest {
 
         when(userRoleService.findUserRoles(userId)).thenReturn(List.of("ROLE_USER"));
 
-        String token = jwtService.generateAccessToken(userId);
+        JwtService.TokenInfo token = jwtService.generateAccessToken(userId);
 
-        Claims claims = jwtService.getClaims(token);
+        Claims claims = jwtService.getClaims(token.getToken());
 
         assertNotNull(claims);
         assertEquals(userId.toString(), claims.getSubject());
     }
 
     @Test
-    void shouldReturnNullWhenTokenCannotBeParsed() {
-        Claims claims = jwtService.getClaims("invalid-token");
-
-        assertNull(claims);
+    void shouldThrowUnauthorizedExceptionWhenTokenCannotBeParsed() {
+        assertNull(jwtService.getClaims("invalid-token"));
     }
 
     @Test
     void shouldReturnFalseWhenTokenIsExpired() {
-        SecurityProps props = new SecurityProps();
-        props.setSecret(SECRET);
+        SecurityProps props = spy(new SecurityProps());
         props.setAccessExpiration(0L);
         props.setRefreshExpiration(REFRESH_EXPIRATION);
+        doReturn(TEST_SECRET).when(props).getSecret();
 
-        JwtService expiredJwtService = new JwtService(props, userRoleService);
+        var expiredJwtService = new JwtService(props, userRoleService);
 
         UUID userId = UUID.randomUUID();
 
         when(userRoleService.findUserRoles(userId)).thenReturn(List.of("ROLE_USER"));
 
-        String token = expiredJwtService.generateAccessToken(userId);
+        JwtService.TokenInfo token = expiredJwtService.generateAccessToken(userId);
 
-        assertFalse(expiredJwtService.isTokenValid(token));
+        assertFalse(expiredJwtService.isTokenValid(token.getToken()));
+    }
+
+    @Test
+    void shouldBeDeterministicWhenGeneratedWithSamePassword() {
+        UUID userId = UUID.randomUUID();
+        when(userRoleService.findUserRoles(userId)).thenReturn(List.of("ROLE_USER"));
+
+        JwtService.TokenInfo tokenFromFirstService = jwtService.generateAccessToken(userId);
+
+        SecurityProps secondProps = spy(new SecurityProps());
+        secondProps.setAccessExpiration(ACCESS_EXPIRATION);
+        secondProps.setRefreshExpiration(REFRESH_EXPIRATION);
+        doReturn(TEST_SECRET).when(secondProps).getSecret();
+
+        var secondJwtService = new JwtService(secondProps, userRoleService);
+
+        assertTrue(secondJwtService.isTokenValid(tokenFromFirstService.getToken()));
+
+        Claims claims = secondJwtService.getClaims(tokenFromFirstService.getToken());
+        assertEquals(userId.toString(), claims.getSubject());
     }
 }

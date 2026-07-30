@@ -32,9 +32,10 @@ public class JwtAuthenticationFilter implements Filter {
 
     @AllArgsConstructor
     @Getter
-    private static class UserPrincipal implements UserDetails {
+    public static class UserPrincipal implements UserDetails {
 
         private final UUID id;
+        private final UUID sessionId;
         private final Collection<? extends GrantedAuthority> authorities;
 
         @Override
@@ -68,13 +69,14 @@ public class JwtAuthenticationFilter implements Filter {
             }
 
             UUID userId = UUID.fromString(claims.getSubject());
+            UUID sessionId = UUID.fromString((String) claims.get("session_id"));
             List<String> roles = (List<String>) claims.get("roles");
 
             var authorities = roles.stream()
                     .map(SimpleGrantedAuthority::new)
                     .toList();
 
-            var principal = new UserPrincipal(userId, authorities);
+            var principal = new UserPrincipal(userId, sessionId, authorities);
             var auth = new UsernamePasswordAuthenticationToken(principal, null, authorities);
 
             SecurityContextHolder.getContext().setAuthentication(auth);
