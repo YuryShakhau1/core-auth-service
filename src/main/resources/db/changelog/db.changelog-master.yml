@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/202607240001_create_user_credentials.sql
+  - include:
+      file: db/changelog/changes/202607240002_create_roles.sql
+  - include:
+      file: db/changelog/changes/202607240005_create_refresh_tokens.sql
