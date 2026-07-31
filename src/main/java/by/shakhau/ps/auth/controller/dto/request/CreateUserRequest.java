@@ -1,8 +1,10 @@
 package by.shakhau.ps.auth.controller.dto.request;
 
 import by.shakhau.ps.auth.model.Password;
-import by.shakhau.ps.auth.util.SafePasswordDeserializer;
+import by.shakhau.ps.auth.model.serialization.SafePasswordDeserializer;
+import by.shakhau.ps.auth.model.serialization.SafePasswordSerializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -50,11 +52,13 @@ public class CreateUserRequest implements Password {
     )
     @Size(min = 7, max = 100, message = "Password must be between 7 and 100 characters")
     @JsonDeserialize(using = SafePasswordDeserializer.class)
-    private char[] password;
+    @JsonSerialize(using = SafePasswordSerializer.class)
+    private StringBuilder password;
 
     @NotEmpty(message = "Repeat password is required")
     @JsonDeserialize(using = SafePasswordDeserializer.class)
-    private char[] repeatPassword;
+    @JsonSerialize(using = SafePasswordSerializer.class)
+    private StringBuilder repeatPassword;
 
     @NotNull(message = "Active status is required")
     private Boolean active;

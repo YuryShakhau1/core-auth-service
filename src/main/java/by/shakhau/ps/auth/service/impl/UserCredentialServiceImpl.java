@@ -8,7 +8,6 @@ import by.shakhau.ps.auth.model.UserCredential;
 import by.shakhau.ps.auth.model.UserShortCredential;
 import by.shakhau.ps.auth.repository.UserCredentialRepository;
 import by.shakhau.ps.auth.repository.UserShortCredentialRepository;
-import by.shakhau.ps.auth.service.RoleService;
 import by.shakhau.ps.auth.service.UserCredentialService;
 import by.shakhau.ps.auth.service.UserRoleService;
 import by.shakhau.ps.auth.service.exception.ResourceNotFoundException;
@@ -29,7 +28,6 @@ public class UserCredentialServiceImpl implements UserCredentialService {
 
     private final PasswordEncoder passwordEncoder;
     private final UserRegistrationProducer userRegistrationProducer;
-    private final RoleService roleService;
     private final UserRoleService userRoleService;
     private final UserEventMapper userEventMapper;
     private final UserCredentialMapper mapper;
@@ -51,10 +49,9 @@ public class UserCredentialServiceImpl implements UserCredentialService {
     @Transactional
     @Override
     public UserCredential registerUser(UserInfo userInfo, String role) {
-        var pass = new StringBuilder().append(userInfo.getPassword());
         UserCredential userCredential = mapper.toUserCredential(userInfo);
-        userCredential.setPasswordHash(passwordEncoder.encode(pass));
-        PasswordUtil.clearPassword(userInfo, pass);
+        userCredential.setPasswordHash(passwordEncoder.encode(userInfo.getPassword()));
+        PasswordUtil.clearPassword(userInfo, userInfo.getPassword());
 
         UUID userId = userInfo.getUserId();
         if (userId != null) {
@@ -98,7 +95,7 @@ public class UserCredentialServiceImpl implements UserCredentialService {
 
     @Transactional
     @Override
-    public void updatePassword(UUID userId, char[] password) {
+    public void updatePassword(UUID userId, StringBuilder password) {
         var pass = new StringBuilder().append(password);
         String passwordHash = passwordEncoder.encode(pass);
         repository.updatePassword(userId, passwordHash);

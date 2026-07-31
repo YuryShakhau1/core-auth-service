@@ -1,6 +1,7 @@
 package by.shakhau.ps.auth.controller;
 
 import by.shakhau.ps.auth.controller.dto.response.ErrorResponse;
+import by.shakhau.ps.auth.controller.exception.CustomValidationException;
 import by.shakhau.ps.auth.controller.exception.UnauthorizedException;
 import by.shakhau.ps.auth.service.exception.ResourceForbiddenException;
 import by.shakhau.ps.auth.service.exception.ResourceNotFoundException;
@@ -27,6 +28,7 @@ public class GlobalExceptionHandler {
     private static final Map<Class<? extends Exception>, HttpStatus> RESPONSE_STATUSES = new HashMap<>();
 
     static {
+        RESPONSE_STATUSES.put(CustomValidationException.class, HttpStatus.FORBIDDEN);
         RESPONSE_STATUSES.put(ResourceNotFoundException.class, HttpStatus.NOT_FOUND);
         RESPONSE_STATUSES.put(UnauthorizedException.class, HttpStatus.UNAUTHORIZED);
         RESPONSE_STATUSES.put(ResourceForbiddenException.class, HttpStatus.FORBIDDEN);

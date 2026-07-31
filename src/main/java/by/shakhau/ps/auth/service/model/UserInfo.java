@@ -16,7 +16,7 @@ public class UserInfo implements Password {
     private String lastName;
     private LocalDate birthDate;
     private String email;
-    private char[] password;
+    private StringBuilder password;
     private Boolean passwordActive;
     private Boolean active;
 }

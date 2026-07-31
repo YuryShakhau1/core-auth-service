@@ -31,7 +31,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Arrays;
 import java.util.UUID;
 
 import static by.shakhau.ps.auth.model.Role.ROLE_ADMIN;
@@ -84,15 +83,15 @@ public class UserCredentialController {
 
     @PatchMapping(value = "/change-password", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
-        if (!Arrays.equals(request.getPassword(), request.getRepeatPassword())) {
+        if (!request.getPassword().toString().contentEquals(request.getRepeatPassword())) {
             throw new CustomValidationException("Password and repeat password must match");
         }
 
-        if (Arrays.equals(request.getPassword(), request.getNewPassword())) {
+        if (request.getPassword().toString().contentEquals(request.getNewPassword())) {
             throw new CustomValidationException("Password and new password must be different");
         }
 
-        Arrays.fill(request.getRepeatPassword(), '0');
+        PasswordUtil.clearPassword(request.getRepeatPassword());
         request.setRepeatPassword(null);
 
         UserShortCredential userCredential = service.findByEmail(request.getEmail());
@@ -104,18 +103,18 @@ public class UserCredentialController {
 
         service.updatePassword(userCredential.getUserId(), request.getNewPassword());
 
-        Arrays.fill(request.getNewPassword(), '0');
+        PasswordUtil.clearPassword(request.getNewPassword());
         request.setNewPassword(null);
 
         return ResponseEntity.noContent().build();
     }
 
     private ResponseEntity<UserResponse> createUser(CreateUserRequest request, String role) {
-        if (!Arrays.equals(request.getPassword(), request.getRepeatPassword())) {
+        if (!request.getPassword().toString().contentEquals(request.getRepeatPassword())) {
             throw new CustomValidationException("Password and repeat password must match");
         }
 
-        Arrays.fill(request.getRepeatPassword(), '0');
+        PasswordUtil.clearPassword(request.getRepeatPassword());
         request.setRepeatPassword(null);
         UserInfo userInfo = mapper.toUserInfo(request);
         userInfo.setPasswordActive(true);

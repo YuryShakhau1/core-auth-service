@@ -12,6 +12,6 @@ public interface UserCredentialService {
     UserCredential findByUserId(UUID userId);
     UserCredential registerUser(UserInfo userInfo, String role);
     void update(UserInfo userInfo);
-    void updatePassword(UUID userId, char[] password);
+    void updatePassword(UUID userId, StringBuilder password);
     void updateActive(UUID userId, Boolean active);
 }
