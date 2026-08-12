@@ -1,9 +1,6 @@
 package by.shakhau.ps.auth.service.impl;
 
 import by.shakhau.ps.auth.mapper.UserCredentialMapper;
-import by.shakhau.ps.auth.messaging.event.UserRegisteredEvent;
-import by.shakhau.ps.auth.messaging.mapper.UserEventMapper;
-import by.shakhau.ps.auth.messaging.producer.UserRegistrationProducer;
 import by.shakhau.ps.auth.model.UserCredential;
 import by.shakhau.ps.auth.model.UserShortCredential;
 import by.shakhau.ps.auth.repository.UserCredentialRepository;
@@ -26,9 +23,7 @@ import java.util.UUID;
 public class UserCredentialServiceImpl implements UserCredentialService {
 
     private final PasswordEncoder passwordEncoder;
-    private final UserRegistrationProducer userRegistrationProducer;
     private final UserRoleService userRoleService;
-    private final UserEventMapper userEventMapper;
     private final UserCredentialMapper mapper;
     private final UserCredentialRepository repository;
     private final UserShortCredentialRepository shortRepository;
@@ -45,22 +40,6 @@ public class UserCredentialServiceImpl implements UserCredentialService {
     }
 
     @Transactional
-    @Override
-    public UserCredential registerUser(UserInfo userInfo, String role) {
-        UserCredential userCredential = mapper.toUserCredential(userInfo);
-        userCredential.setPasswordHash(passwordEncoder.encode(userInfo.getPassword()));
-        PasswordUtil.clearPassword(userInfo, userInfo.getPassword());
-
-        userCredential = repository.save(userCredential);
-        UUID userId = userCredential.getUserId();
-
-        userRoleService.addUserRole(userId, role);
-
-        sendUserToExternalSystem(userInfo, userId);
-
-        return userCredential;
-    }
-
     @Override
     public void registerExternalUser(UserInfo userInfo, String role) {
         UserCredential userCredential = mapper.toUserCredential(userInfo);
@@ -85,6 +64,7 @@ public class UserCredentialServiceImpl implements UserCredentialService {
         userRoleService.addUserRole(userId, role);
     }
 
+    @Transactional
     @Override
     public void update(UserInfo userInfo) {
         UserCredential credential = repository.findById(userInfo.getUserId())
@@ -107,11 +87,5 @@ public class UserCredentialServiceImpl implements UserCredentialService {
     @Override
     public void updateActive(UUID userId, Boolean active) {
         repository.updateActive(userId, active);
-    }
-
-    private void sendUserToExternalSystem(UserInfo userInfo, UUID userId) {
-        userInfo.setUserId(userId);
-        UserRegisteredEvent event = userEventMapper.toUserRegisteredEvent(userInfo);
-        userRegistrationProducer.send(event);
     }
 }

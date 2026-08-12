@@ -10,7 +10,6 @@ public interface UserCredentialService {
 
     UserShortCredential findByEmail(String email);
     UserCredential findByUserId(UUID userId);
-    UserCredential registerUser(UserInfo userInfo, String role);
     void registerExternalUser(UserInfo userInfo, String role);
     void update(UserInfo userInfo);
     void updatePassword(UUID userId, StringBuilder password);

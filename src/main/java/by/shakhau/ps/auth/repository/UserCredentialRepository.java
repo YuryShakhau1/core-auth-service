@@ -24,7 +24,7 @@ public interface UserCredentialRepository extends JpaRepository<UserCredential, 
     @Modifying
     void updateActive(UUID userId, Boolean active);
 
-    @Modifying(clearAutomatically = true)
+    @Modifying
     @Query(value = """
             INSERT INTO user_credentials (user_id, first_name, last_name, email, password_hash, password_active, active, created_at, updated_at) 
             SELECT :#{#u.userId}, :#{#u.firstName}, :#{#u.lastName}, :#{#u.email}, :#{#u.passwordHash}, :#{#u.passwordActive}, :#{#u.active}, NOW(), NOW() 
@@ -33,7 +33,7 @@ public interface UserCredentialRepository extends JpaRepository<UserCredential, 
             nativeQuery = true)
     void insertIfDoesNotExist(@Param("u") UserCredential userCredential);
 
-    @Modifying(clearAutomatically = true)
+    @Modifying
     @Query(value = """
             INSERT INTO user_credential_roles (user_id, role_id) VALUES (:userId, :roleId)
             ON CONFLICT (user_id, role_id) DO NOTHING

@@ -2,7 +2,6 @@ package by.shakhau.ps.auth.service.impl;
 
 import by.shakhau.ps.auth.mapper.UserCredentialMapper;
 import by.shakhau.ps.auth.messaging.mapper.UserEventMapper;
-import by.shakhau.ps.auth.messaging.producer.UserRegistrationProducer;
 import by.shakhau.ps.auth.model.UserCredential;
 import by.shakhau.ps.auth.model.UserShortCredential;
 import by.shakhau.ps.auth.repository.UserCredentialRepository;
@@ -36,9 +35,6 @@ class UserCredentialServiceImplTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private UserRegistrationProducer userRegistrationProducer;
 
     @Mock
     private UserRoleService userRoleService;
@@ -110,33 +106,6 @@ class UserCredentialServiceImplTest {
                         () -> service.findByUserId(userId));
 
         assertEquals("User ID %s not found".formatted(userId), exception.getMessage());
-    }
-
-    @Test
-    void shouldRegisterNewUserWhenUserIdIsNull() {
-        UserInfo userInfo = createUserInfo(null);
-        UserCredential credential = createCredential();
-
-        UUID userId = UUID.randomUUID();
-
-        when(mapper.toUserCredential(userInfo)).thenReturn(credential);
-
-        when(passwordEncoder.encode(any(StringBuilder.class))).thenReturn("hash");
-
-        when(repository.save(credential))
-                .thenAnswer(invocation -> {
-                    credential.setUserId(userId);
-                    return credential;
-                });
-
-        service.registerUser(userInfo, "ROLE_USER");
-
-        assertEquals(userId, userInfo.getUserId());
-        assertEquals("hash", credential.getPasswordHash());
-        verify(repository).save(credential);
-        verify(userRoleService).addUserRole(userId, "ROLE_USER");
-        verify(userEventMapper).toUserRegisteredEvent(userInfo);
-        verify(userRegistrationProducer).send(any());
     }
 
     @Test

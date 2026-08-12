@@ -200,39 +200,6 @@ POST /auth/users
 
 ---
 
-### 4. Create administrator.
-
-Rest endpoint to register new administrator.
-
-POST /auth/users/create-admin  
-
-```json
-{
-  "firstName": "<user_first_name>",
-  "lastName": "<user_last_name>",
-  "birthDate": "<user_birth_date> in yyyy-MM-dd format",
-  "email": "<user_email>",
-  "password": "<new_user_password>",
-  "repeatPassword": "<new_user_password>",
-  "active": "<true_or_false_user_status>",
-  "adminInitSecret": "<admin_secret>"
-}
-```
-
-* **Success (201 Created):**
-```json
-{
-  "id": "<user_id_uuid>",
-  "firstName": "<user_first_name>",
-  "lastName": "<user_last_name>",
-  "birthDate": "<user_birth_date> in yyyy-MM-dd format",
-  "email": "<user_email>",
-  "active": "<true_or_false_user_status>"
-}
-```
-
----
-
 ### 5. Change user password.
 
 Rest endpoint to change user password.
