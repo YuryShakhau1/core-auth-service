@@ -20,9 +20,9 @@ spring:
     enabled: true
 
   jwt:
-    secret: ${JWT_SECRET}
-    access-expiration: 900
-    refresh-expiration: 86400
+    secret: ${PRIVATE_KEY}
+    access-expiration: ${JWT_ACCESS_EXPIRATION}
+    refresh-expiration: ${JWT_PRIVATE_EXPIRATION}
     max-session-count: 5
     admin-init-secret: ${ADMIN_INIT_SECRET}
 

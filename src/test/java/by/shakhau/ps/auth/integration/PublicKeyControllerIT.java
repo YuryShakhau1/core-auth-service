@@ -2,7 +2,6 @@ package by.shakhau.ps.auth.integration;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
-import org.testcontainers.shaded.com.google.common.net.HttpHeaders;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;

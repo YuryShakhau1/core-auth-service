@@ -22,7 +22,7 @@ public class CreateUserConsumer {
     public void consume(UserCreatedEvent event, Acknowledgment ack) {
         UserInfo userInfo = userEventMapper.toUserInfo(event);
         userInfo.setPasswordActive(false);
-        userCredentialService.registerUser(userInfo, event.getRole());
+        userCredentialService.registerExternalUser(userInfo, event.getRole());
 
         ack.acknowledge();
     }

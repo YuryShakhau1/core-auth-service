@@ -12,15 +12,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.testcontainers.shaded.com.google.common.net.HttpHeaders;
 
 import java.util.UUID;
 
+import static by.shakhau.ps.auth.controller.filter.AuthenticationFilter.SESSION_ID_HEADER;
+import static by.shakhau.ps.auth.controller.filter.AuthenticationFilter.USER_ID_HEADER;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -46,7 +46,7 @@ class AuthControllerIT extends AbstractIntegrationTest {
                 user.getEmail(),
                 new StringBuilder("Password1!"));
 
-        mockMvc.perform(get("/auth/login")
+        mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -64,7 +64,7 @@ class AuthControllerIT extends AbstractIntegrationTest {
                 user.getEmail(),
                 new StringBuilder("WrongPassword"));
 
-        mockMvc.perform(get("/auth/login")
+        mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
@@ -100,28 +100,17 @@ class AuthControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void shouldValidateToken() throws Exception {
-        when(jwtService.isTokenValid("token")).thenReturn(true);
-
-        mockMvc.perform(get("/auth/token/{token}/valid", "token"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.valid").value("true"));
-    }
-
-    @Test
     void shouldLogout() throws Exception {
         UUID userId = UUID.fromString(USER_ID);
         UUID sessionId = UUID.randomUUID();
 
-        Claims claims = jwtService.getClaims("access-token");
-        when(claims.get("session_id")).thenReturn(sessionId.toString());
-
         mockMvc.perform(post("/auth/logout")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer access-token"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId)
+                        .header(SESSION_ID_HEADER, sessionId))
                 .andExpect(status().isNoContent());
 
-        verify(refreshTokenService)
-                .deleteByUserIdAndSessionId(userId, sessionId);
+        verify(refreshTokenService).deleteByUserIdAndSessionId(userId, sessionId);
     }
 
     @Test
@@ -129,7 +118,9 @@ class AuthControllerIT extends AbstractIntegrationTest {
         UUID userId = UUID.fromString(USER_ID);
 
         mockMvc.perform(post("/auth/logout/all")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer access-token"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header(USER_ID_HEADER, userId)
+                        .header(SESSION_ID_HEADER, SESSION_ID))
                 .andExpect(status().isNoContent());
 
         verify(refreshTokenService).deleteByUserId(userId);

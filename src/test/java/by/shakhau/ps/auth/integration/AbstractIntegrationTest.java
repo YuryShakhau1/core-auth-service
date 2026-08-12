@@ -45,7 +45,6 @@ import static org.mockito.Mockito.when;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public abstract class AbstractIntegrationTest {
 
-    protected static final String AUTHORIZATION_HEADER = "Bearer 123";
     protected static final String PUBLIC_KEY = UUID.randomUUID().toString();
     protected static final String USER_ID = UUID.randomUUID().toString();
     protected static final String SESSION_ID = UUID.randomUUID().toString();

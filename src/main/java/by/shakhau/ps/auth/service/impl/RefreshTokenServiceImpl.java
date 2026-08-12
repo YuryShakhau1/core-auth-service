@@ -1,5 +1,6 @@
 package by.shakhau.ps.auth.service.impl;
 
+import by.shakhau.ps.auth.config.SecurityProps;
 import by.shakhau.ps.auth.model.RefreshToken;
 import by.shakhau.ps.auth.repository.RefreshTokenRepository;
 import by.shakhau.ps.auth.service.RefreshTokenService;
@@ -21,6 +22,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class RefreshTokenServiceImpl implements RefreshTokenService {
 
+    private final SecurityProps securityProps;
     private final JwtService jwtService;
     private final RefreshTokenRepository repository;
 
@@ -50,7 +52,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         token.setSessionId(sessionId);
         token.setTokenHash(DigestUtils.sha256Hex(refreshToken));
         token.setCreatedAt(Date.from(now));
-        token.setExpiryDate(Date.from(now.plus(15, ChronoUnit.MINUTES)));
+        token.setExpiryDate(Date.from(now.plus(securityProps.getRefreshExpiration(), ChronoUnit.SECONDS)));
         repository.save(token);
     }
 

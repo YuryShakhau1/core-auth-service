@@ -10,12 +10,12 @@ import by.shakhau.ps.auth.repository.UserCredentialRepository;
 import by.shakhau.ps.auth.repository.UserShortCredentialRepository;
 import by.shakhau.ps.auth.service.UserCredentialService;
 import by.shakhau.ps.auth.service.UserRoleService;
+import by.shakhau.ps.auth.service.exception.ResourceForbiddenException;
 import by.shakhau.ps.auth.service.exception.ResourceNotFoundException;
 import by.shakhau.ps.auth.service.model.UserInfo;
 import by.shakhau.ps.auth.util.PasswordUtil;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -23,7 +23,6 @@ import java.util.UUID;
 
 @Service
 @AllArgsConstructor
-@Slf4j
 public class UserCredentialServiceImpl implements UserCredentialService {
 
     private final PasswordEncoder passwordEncoder;
@@ -36,8 +35,7 @@ public class UserCredentialServiceImpl implements UserCredentialService {
 
     @Override
     public UserShortCredential findByEmail(String email) {
-        return shortRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User with email %s not found".formatted(email)));
+        return shortRepository.findByEmail(email).orElse(null);
     }
 
     @Override
@@ -53,6 +51,22 @@ public class UserCredentialServiceImpl implements UserCredentialService {
         userCredential.setPasswordHash(passwordEncoder.encode(userInfo.getPassword()));
         PasswordUtil.clearPassword(userInfo, userInfo.getPassword());
 
+        userCredential = repository.save(userCredential);
+        UUID userId = userCredential.getUserId();
+
+        userRoleService.addUserRole(userId, role);
+
+        sendUserToExternalSystem(userInfo, userId);
+
+        return userCredential;
+    }
+
+    @Override
+    public void registerExternalUser(UserInfo userInfo, String role) {
+        UserCredential userCredential = mapper.toUserCredential(userInfo);
+        userCredential.setPasswordHash(passwordEncoder.encode(userInfo.getPassword()));
+        PasswordUtil.clearPassword(userInfo, userInfo.getPassword());
+
         UUID userId = userInfo.getUserId();
         if (userId != null) {
             userCredential.setPasswordActive(false);
@@ -62,26 +76,13 @@ public class UserCredentialServiceImpl implements UserCredentialService {
                 credentialFound.setPasswordHash(userCredential.getPasswordHash());
                 repository.save(credentialFound);
             } else {
-                repository.insertUser(userCredential);
+                repository.insertIfDoesNotExist(userCredential);
             }
         } else {
-            userCredential = repository.save(userCredential);
-            userId = userCredential.getUserId();
+            throw new ResourceForbiddenException("External user must have id");
         }
 
-        try {
-            userRoleService.addUserRole(userId, role);
-        } catch (ResourceNotFoundException e) {
-            log.warn(e.getMessage(), e);
-        }
-
-        if (userInfo.getUserId() == null) {
-            userInfo.setUserId(userId);
-            UserRegisteredEvent event = userEventMapper.toUserRegisteredEvent(userInfo);
-            userRegistrationProducer.send(event);
-        }
-
-        return userCredential;
+        userRoleService.addUserRole(userId, role);
     }
 
     @Override
@@ -106,5 +107,11 @@ public class UserCredentialServiceImpl implements UserCredentialService {
     @Override
     public void updateActive(UUID userId, Boolean active) {
         repository.updateActive(userId, active);
+    }
+
+    private void sendUserToExternalSystem(UserInfo userInfo, UUID userId) {
+        userInfo.setUserId(userId);
+        UserRegisteredEvent event = userEventMapper.toUserRegisteredEvent(userInfo);
+        userRegistrationProducer.send(event);
     }
 }

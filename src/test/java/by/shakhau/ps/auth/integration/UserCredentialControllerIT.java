@@ -9,10 +9,12 @@ import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.testcontainers.shaded.com.google.common.net.HttpHeaders;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
+import static by.shakhau.ps.auth.controller.filter.AuthenticationFilter.SESSION_ID_HEADER;
+import static by.shakhau.ps.auth.controller.filter.AuthenticationFilter.USER_ID_HEADER;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -33,22 +35,24 @@ class UserCredentialControllerIT extends AbstractIntegrationTest {
         when(claims.getSubject()).thenReturn(user.getUserId().toString());
 
         mockMvc.perform(get("/auth/users/me")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer access-token"))
+                        .header(USER_ID_HEADER, user.getUserId())
+                        .header(SESSION_ID_HEADER, SESSION_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("ivan@test.com"))
                 .andExpect(jsonPath("$.firstName").value("Ivan"))
                 .andExpect(jsonPath("$.lastName").value("Ivanov"));
     }
 
-
     @Test
     void shouldFindCurrentUserRoles() throws Exception {
+        UUID userId = UUID.randomUUID();
+
         mockMvc.perform(get("/auth/users/me/roles")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer access-token"))
+                        .header(USER_ID_HEADER, userId)
+                        .header(SESSION_ID_HEADER, SESSION_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roleNames").isArray());
     }
-
 
     @Test
     void shouldCreateUser() throws Exception {
@@ -62,15 +66,12 @@ class UserCredentialControllerIT extends AbstractIntegrationTest {
         request.setActive(true);
 
         mockMvc.perform(post("/auth/users")
-                        .header(HttpHeaders.AUTHORIZATION,
-                                AUTHORIZATION_HEADER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.email")
                         .value("petr@test.com"));
     }
-
 
     @Test
     void shouldCreateAdmin() throws Exception {
@@ -95,7 +96,6 @@ class UserCredentialControllerIT extends AbstractIntegrationTest {
                         .value("admin@test.com"));
     }
 
-
     @Test
     void shouldRejectCreateAdminWithWrongSecret() throws Exception {
         when(securityProps.getAdminInitSecretHash()).thenReturn("wrong-hash");
@@ -116,7 +116,6 @@ class UserCredentialControllerIT extends AbstractIntegrationTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
     }
-
 
     @Test
     void shouldChangePassword() throws Exception {

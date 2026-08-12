@@ -7,11 +7,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.testcontainers.shaded.com.google.common.net.HttpHeaders;
 
 import java.util.List;
 import java.util.UUID;
 
+import static by.shakhau.ps.auth.controller.filter.AuthenticationFilter.SESSION_ID_HEADER;
+import static by.shakhau.ps.auth.controller.filter.AuthenticationFilter.USER_ID_HEADER;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -33,11 +34,11 @@ class UserRoleControllerIT extends AbstractIntegrationTest {
     void shouldReturnUserRoles() throws Exception {
         UUID userId = UUID.randomUUID();
 
-        when(userRoleService.findUserRoles(userId))
-                .thenReturn(List.of("ADMIN", "USER"));
+        when(userRoleService.findUserRoles(userId)).thenReturn(List.of("ADMIN", "USER"));
 
         mockMvc.perform(get("/auth/users/{userId}/roles", userId)
-                        .header(HttpHeaders.AUTHORIZATION, AUTHORIZATION_HEADER))
+                        .header(USER_ID_HEADER, userId)
+                        .header(SESSION_ID_HEADER, SESSION_ID))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.roleNames").isArray())
@@ -55,7 +56,8 @@ class UserRoleControllerIT extends AbstractIntegrationTest {
 
         mockMvc.perform(post("/auth/users/{userId}/roles", userId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header(HttpHeaders.AUTHORIZATION, AUTHORIZATION_HEADER)
+                        .header(USER_ID_HEADER, userId)
+                        .header(SESSION_ID_HEADER, SESSION_ID)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNoContent());
 
@@ -67,7 +69,8 @@ class UserRoleControllerIT extends AbstractIntegrationTest {
         UUID userId = UUID.randomUUID();
 
         mockMvc.perform(delete("/auth/users/{userId}/roles/{roleName}", userId, "ADMIN")
-                        .header(HttpHeaders.AUTHORIZATION, AUTHORIZATION_HEADER))
+                        .header(USER_ID_HEADER, userId)
+                        .header(SESSION_ID_HEADER, SESSION_ID))
                 .andExpect(status().isNoContent());
 
         verify(userRoleService).deleteUserRole(userId, "ADMIN");

@@ -4,9 +4,8 @@ import by.shakhau.ps.auth.config.SecurityProps;
 import by.shakhau.ps.auth.controller.dto.request.LoginRequest;
 import by.shakhau.ps.auth.controller.dto.request.RefreshTokenRequest;
 import by.shakhau.ps.auth.controller.dto.response.TokenResponse;
-import by.shakhau.ps.auth.controller.dto.response.TokenValidResponse;
 import by.shakhau.ps.auth.controller.exception.UnauthorizedException;
-import by.shakhau.ps.auth.controller.filter.JwtAuthenticationFilter.UserPrincipal;
+import by.shakhau.ps.auth.controller.filter.AuthenticationFilter.UserPrincipal;
 import by.shakhau.ps.auth.model.RefreshToken;
 import by.shakhau.ps.auth.model.UserShortCredential;
 import by.shakhau.ps.auth.service.RefreshTokenService;
@@ -22,8 +21,6 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,6 +30,8 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 @RestController
 @RequestMapping("/auth")
@@ -45,7 +44,7 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
     private final UserCredentialService userCredentialService;
 
-    @GetMapping("/login")
+    @PostMapping(value = "/login", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
         UserShortCredential userCredential = userCredentialService.findByEmail(request.getEmail());
 
@@ -73,11 +72,11 @@ public class AuthController {
         return ResponseEntity.ok(new TokenResponse(accessToken.getToken(), refreshToken));
     }
 
-    @PostMapping("/token/refresh")
+    @PostMapping(value = "/token/refresh", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
     public ResponseEntity<TokenResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         String refreshToken = request.getRefreshToken();
         if (!jwtService.isTokenValid(refreshToken)) {
-            throw new UnauthorizedException("Refresh token %s is invalid".formatted(refreshToken));
+            throw new UnauthorizedException("Refresh token is invalid");
         }
 
         Claims claims = jwtService.getClaims(refreshToken);
@@ -86,12 +85,12 @@ public class AuthController {
 
         String existingTokenHash = refreshTokenService.findTokenHashByUserIdAndSessionId(userId, sessionId);
         if (existingTokenHash == null) {
-            throw new UnauthorizedException("Refresh token %s not found".formatted(refreshToken));
+            throw new UnauthorizedException("Refresh token not found");
         }
 
         String refreshTokenHash = DigestUtils.sha256Hex(refreshToken);
         if (!refreshTokenHash.equals(existingTokenHash)) {
-            throw new UnauthorizedException("Refresh token %s is not valid".formatted(refreshToken));
+            throw new UnauthorizedException("Refresh token is not valid");
         }
 
         var sId = sessionId.toString();
@@ -101,11 +100,6 @@ public class AuthController {
         refreshTokenService.updateToken(userId, sessionId, generatedRefreshToken);
 
         return ResponseEntity.ok(new TokenResponse(generatedAccessToken.getToken(), generatedRefreshToken));
-    }
-
-    @GetMapping(value = "/token/{token}/valid")
-    public ResponseEntity<TokenValidResponse> tokenValid(@PathVariable String token) {
-        return ResponseEntity.ok(new TokenValidResponse(jwtService.isTokenValid(token)));
     }
 
     @PostMapping("/logout")

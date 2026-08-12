@@ -1,7 +1,6 @@
 package by.shakhau.ps.auth.service.impl;
 
 import by.shakhau.ps.auth.config.SecurityProps;
-import by.shakhau.ps.auth.controller.exception.UnauthorizedException;
 import by.shakhau.ps.auth.service.UserRoleService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -9,12 +8,13 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.SecureRandom;
+import java.security.interfaces.RSAPrivateCrtKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.RSAPublicKeySpec;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
@@ -86,12 +86,8 @@ public class JwtService {
     }
 
     public boolean isTokenValid(String token) {
-        try {
-            Claims claims = getClaims(token);
-            return claims != null && claims.getExpiration().after(new Date());
-        } catch (Exception e) {
-            return false;
-        }
+        Claims claims = getClaims(token);
+        return claims != null && claims.getExpiration().after(new Date());
     }
 
     public Claims getClaims(String token) {
@@ -106,17 +102,22 @@ public class JwtService {
         }
     }
 
-    private KeyPair generateKeyPairFromPassword(String password) {
+    private KeyPair generateKeyPairFromPassword(String privateKeyBase64) {
         try {
-            SecureRandom deterministicRandom = SecureRandom.getInstance("SHA1PRNG", "SUN");
-            deterministicRandom.setSeed(password.getBytes(StandardCharsets.UTF_8));
+            String cleanKey = privateKeyBase64.trim().replaceAll("\\s+", "");
+            byte[] privateBytes = Base64.getDecoder().decode(cleanKey);
 
-            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-            keyPairGenerator.initialize(2048, deterministicRandom);
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(privateBytes);
+            RSAPrivateCrtKey rsaPrivateKey = (RSAPrivateCrtKey) keyFactory.generatePrivate(privateKeySpec);
 
-            return keyPairGenerator.generateKeyPair();
+            var publicKeySpec = new RSAPublicKeySpec(
+                    rsaPrivateKey.getModulus(), rsaPrivateKey.getPublicExponent());
+            PublicKey rsaPublicKey = keyFactory.generatePublic(publicKeySpec);
+
+            return new KeyPair(rsaPublicKey, rsaPrivateKey);
         } catch (Exception e) {
-            throw new IllegalStateException("Failed to generate RSA keys from password", e);
+            throw new IllegalStateException("Couldn't create key pair by Base64 string", e);
         }
     }
 }
