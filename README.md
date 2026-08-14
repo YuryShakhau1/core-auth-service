@@ -16,7 +16,7 @@ The microservice application to manage user access abd refresh tokens.
 | `SHOW_SQL`                 | Boolean | Not mandatory parameter to allow show sql queries in debug only    |
 | `CARD_SECRET_KEY`          | Boolean | 32 symblos secret password to encrypt/dercypt payment card numbers |
 | `REDIS_SECRET_PASSWORD`    | String  | Redis password                                                     |
-| `KAFKA_HOST_POST`          | String  | Kafka host:port                                                    |
+| `KAFKA_HOST_PORT`          | String  | Kafka host:port                                                    |
 
 ## Tables
 
@@ -88,7 +88,7 @@ AUTH_SERVICE_DB_PORT=5433
 AUTH_SERVICE_DB_USERNAME=db_username
 AUTH_SERVICE_DB_PASSWORD=db_password
 
-KAFKA_HOST_POST=localhost:9092
+KAFKA_HOST_PORT=localhost:9092
 
 SHOW_SQL=true
 

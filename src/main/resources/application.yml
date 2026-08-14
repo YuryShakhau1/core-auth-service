@@ -27,7 +27,7 @@ spring:
     admin-init-secret: ${ADMIN_INIT_SECRET}
 
   kafka:
-    bootstrap-servers: ${KAFKA_HOST_POST}
+    bootstrap-servers: ${KAFKA_HOST_PORT}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer

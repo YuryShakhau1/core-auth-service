@@ -36,11 +36,6 @@ public class ChangePasswordRequest implements Password {
     @JsonSerialize(using = SafePasswordSerializer.class)
     private StringBuilder password;
 
-    @NotBlank(message = "Repeat password is required")
-    @JsonDeserialize(using = SafePasswordDeserializer.class)
-    @JsonSerialize(using = SafePasswordSerializer.class)
-    private StringBuilder repeatPassword;
-
     @NotBlank(message = "New password is required")
     @Pattern(
             regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@#$%^&+=!]).*$",
@@ -55,4 +50,9 @@ public class ChangePasswordRequest implements Password {
     @JsonDeserialize(using = SafePasswordDeserializer.class)
     @JsonSerialize(using = SafePasswordSerializer.class)
     private StringBuilder newPassword;
+
+    @NotBlank(message = "Repeat new password is required")
+    @JsonDeserialize(using = SafePasswordDeserializer.class)
+    @JsonSerialize(using = SafePasswordSerializer.class)
+    private StringBuilder repeatNewPassword;
 }

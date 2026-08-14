@@ -30,7 +30,7 @@ spring:
     admin-init-secret: ${ADMIN_INIT_SECRET:placeholder_for_local_testing}
 
   kafka:
-    bootstrap-servers: ${KAFKA_HOST_POST:localhost:9092}
+    bootstrap-servers: ${KAFKA_HOST_PORT:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer

@@ -55,16 +55,12 @@ public class UserCredentialController {
 
     @PatchMapping(value = "/change-password", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
-        if (!PasswordUtil.compare(request.getPassword(), request.getRepeatPassword())) {
-            throw new CustomValidationException("Password and repeat password must match");
+        if (!PasswordUtil.equals(request.getNewPassword(), request.getRepeatNewPassword())) {
+            throw new CustomValidationException("New password and repeat password must match");
         }
 
-        if (PasswordUtil.compare(request.getPassword(), request.getNewPassword())) {
-            throw new CustomValidationException("Password and new password must be different");
-        }
-
-        PasswordUtil.clearPassword(request.getRepeatPassword());
-        request.setRepeatPassword(null);
+        PasswordUtil.clearPassword(request.getRepeatNewPassword());
+        request.setRepeatNewPassword(null);
 
         UserShortCredential userCredential = service.findByEmail(request.getEmail());
         var password = new StringBuilder().append(request.getPassword());

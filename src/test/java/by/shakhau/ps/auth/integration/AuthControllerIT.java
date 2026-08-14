@@ -1,12 +1,12 @@
 package by.shakhau.ps.auth.integration;
 
 import by.shakhau.ps.auth.controller.dto.request.LoginRequest;
-import by.shakhau.ps.auth.controller.dto.request.RefreshTokenRequest;
 import by.shakhau.ps.auth.model.UserCredential;
 import by.shakhau.ps.auth.service.RefreshTokenService;
 import by.shakhau.ps.auth.service.impl.JwtService.TokenInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
+import jakarta.servlet.http.Cookie;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +15,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.UUID;
 
+import static by.shakhau.ps.auth.controller.AuthController.REFRESH_TOKEN_URL;
 import static by.shakhau.ps.auth.controller.filter.AuthenticationFilter.SESSION_ID_HEADER;
 import static by.shakhau.ps.auth.controller.filter.AuthenticationFilter.USER_ID_HEADER;
 import static org.mockito.ArgumentMatchers.any;
@@ -22,6 +23,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -50,8 +52,13 @@ class AuthControllerIT extends AbstractIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").value("access-token"))
-                .andExpect(jsonPath("$.refreshToken").value("refresh-token"));
+                .andExpect(cookie().exists("refreshToken"))
+                .andExpect(cookie().httpOnly("refreshToken", true))
+                .andExpect(cookie().secure("refreshToken", true))
+                .andExpect(cookie().path("refreshToken", REFRESH_TOKEN_URL))
+                .andExpect(cookie().maxAge("refreshToken", (int) securityProps.getRefreshExpiration() * 1000 + 60 * 1000))
+
+                .andExpect(jsonPath("$.accessToken").value("access-token"));
 
         verify(refreshTokenService).save(user.getUserId(), "refresh-token");
     }
@@ -86,14 +93,18 @@ class AuthControllerIT extends AbstractIntegrationTest {
                 new TokenInfo("new-access", sessionId.toString()));
         when(jwtService.generateRefreshToken(userId, sessionId.toString())).thenReturn("new-refresh");
 
-        var request = new RefreshTokenRequest("refresh-token");
-
-        mockMvc.perform(post("/auth/token/refresh")
+        mockMvc.perform(post(REFRESH_TOKEN_URL)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .cookie(new Cookie("refreshToken", "refresh-token")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").value("new-access"))
-                .andExpect(jsonPath("$.refreshToken").value("new-refresh"));
+
+                .andExpect(cookie().exists("refreshToken"))
+                .andExpect(cookie().httpOnly("refreshToken", true))
+                .andExpect(cookie().secure("refreshToken", true))
+                .andExpect(cookie().path("refreshToken", REFRESH_TOKEN_URL))
+                .andExpect(cookie().maxAge("refreshToken", (int) securityProps.getRefreshExpiration() * 1000 + 60 * 1000))
+
+                .andExpect(jsonPath("$.accessToken").value("new-access"));
 
         verify(refreshTokenService)
                 .updateToken(userId, sessionId, "new-refresh");

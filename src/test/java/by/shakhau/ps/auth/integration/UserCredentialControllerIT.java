@@ -59,8 +59,8 @@ class UserCredentialControllerIT extends AbstractIntegrationTest {
         var request = new ChangePasswordRequest();
         request.setEmail(user.getEmail());
         request.setPassword(password);
-        request.setRepeatPassword(password);
         request.setNewPassword(new StringBuilder("NewPassword1!"));
+        request.setRepeatNewPassword(new StringBuilder("NewPassword1!"));
 
         mockMvc.perform(patch("/auth/users/change-password")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -73,7 +73,7 @@ class UserCredentialControllerIT extends AbstractIntegrationTest {
         var request = new ChangePasswordRequest();
         request.setEmail("ivan@test.com");
         request.setPassword(new StringBuilder("Password1!"));
-        request.setRepeatPassword(new StringBuilder("Different1!"));
+        request.setRepeatNewPassword(new StringBuilder("Different1!"));
         request.setNewPassword(new StringBuilder("NewPassword1!"));
 
         mockMvc.perform(patch("/auth/users/change-password")

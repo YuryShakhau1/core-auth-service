@@ -2,7 +2,6 @@ package by.shakhau.ps.auth.controller;
 
 import by.shakhau.ps.auth.config.SecurityProps;
 import by.shakhau.ps.auth.controller.dto.request.LoginRequest;
-import by.shakhau.ps.auth.controller.dto.request.RefreshTokenRequest;
 import by.shakhau.ps.auth.controller.dto.response.TokenResponse;
 import by.shakhau.ps.auth.controller.exception.UnauthorizedException;
 import by.shakhau.ps.auth.controller.filter.AuthenticationFilter.UserPrincipal;
@@ -18,9 +17,12 @@ import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,6 +39,9 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @RequestMapping("/auth")
 @AllArgsConstructor
 public class AuthController {
+
+    private static final String METHOD_REFRESH_TOKEN_URL = "/token/refresh";
+    public static final String REFRESH_TOKEN_URL = "/auth" + METHOD_REFRESH_TOKEN_URL;
 
     private final SecurityProps securityProps;
     private final PasswordEncoder passwordEncoder;
@@ -69,12 +74,12 @@ public class AuthController {
 
         deleteSessionOutOfLimit(userId);
 
-        return ResponseEntity.ok(new TokenResponse(accessToken.getToken(), refreshToken));
+        return buildTokenResponse(accessToken.getToken(), refreshToken);
     }
 
-    @PostMapping(value = "/token/refresh", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
-    public ResponseEntity<TokenResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
-        String refreshToken = request.getRefreshToken();
+    @PostMapping(value = METHOD_REFRESH_TOKEN_URL, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+    public ResponseEntity<TokenResponse> refreshToken(
+            @CookieValue(name = "refreshToken", required = false) String refreshToken) {
         if (!jwtService.isTokenValid(refreshToken)) {
             throw new UnauthorizedException("Refresh token is invalid");
         }
@@ -99,7 +104,7 @@ public class AuthController {
 
         refreshTokenService.updateToken(userId, sessionId, generatedRefreshToken);
 
-        return ResponseEntity.ok(new TokenResponse(generatedAccessToken.getToken(), generatedRefreshToken));
+        return buildTokenResponse(generatedAccessToken.getToken(), refreshToken);
     }
 
     @PostMapping("/logout")
@@ -112,6 +117,21 @@ public class AuthController {
     public ResponseEntity<Void> logoutAll(@AuthenticationPrincipal UserPrincipal principal) {
         refreshTokenService.deleteByUserId(principal.getId());
         return ResponseEntity.noContent().build();
+    }
+
+    private ResponseEntity<TokenResponse> buildTokenResponse(String accessToken, String refreshToken) {
+        ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path(REFRESH_TOKEN_URL)
+                .maxAge(securityProps.getRefreshExpiration() * 1000 + 60 * 1000)
+                .build();
+
+        return ResponseEntity
+                .ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(new TokenResponse(accessToken));
     }
 
     private void deleteSessionOutOfLimit(UUID userId) {

@@ -9,7 +9,7 @@ import java.util.Arrays;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class PasswordUtil {
 
-    public static boolean compare(StringBuilder password1, StringBuilder password2) {
+    public static boolean equals(StringBuilder password1, StringBuilder password2) {
         return Arrays.equals(toCharArray(password1), toCharArray(password2));
     }
 
