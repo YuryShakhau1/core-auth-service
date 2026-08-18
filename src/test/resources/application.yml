@@ -27,7 +27,6 @@ spring:
     access-expiration: 900
     refresh-expiration: 86400
     max-session-count: 5
-    admin-init-secret: ${ADMIN_INIT_SECRET:placeholder_for_local_testing}
 
   kafka:
     bootstrap-servers: ${KAFKA_HOST_PORT:localhost:9092}
@@ -43,3 +42,15 @@ spring:
 
   config:
     import: optional:file:.env[.properties]
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
+  endpoints:
+    web:
+      exposure:
+        include: health,info

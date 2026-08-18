@@ -6,8 +6,14 @@ spring:
     activate:
       on-profile: docker
 
+  data:
+    redis:
+      host: redis
+      port: 6379
+      password: ${REDIS_SECRET_PASSWORD}
+
   datasource:
-    url: jdbc:postgresql://postgres:${AUTH_SERVICE_DB_PORT}/${AUTH_SERVICE_DB_NAME}
+    url: jdbc:postgresql://${AUTH_SERVICE_DB_HOST}:${AUTH_SERVICE_DB_PORT}/${AUTH_SERVICE_DB_NAME}
     username: ${AUTH_SERVICE_DB_USERNAME}
     password: ${AUTH_SERVICE_DB_PASSWORD}
 

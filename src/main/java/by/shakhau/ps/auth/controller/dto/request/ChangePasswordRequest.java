@@ -22,15 +22,6 @@ public class ChangePasswordRequest implements Password {
     private String email;
 
     @NotBlank(message = "Password is required")
-    @Pattern(
-            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@#$%^&+=!]).*$",
-            message = """
-                      Password must contain at least one lowercase letter, 
-                      one uppercase letter, 
-                      one digit, 
-                      and one special character
-                      """
-    )
     @Size(min = 7, max = 100, message = "Password must be between 7 and 100 characters")
     @JsonDeserialize(using = SafePasswordDeserializer.class)
     @JsonSerialize(using = SafePasswordSerializer.class)

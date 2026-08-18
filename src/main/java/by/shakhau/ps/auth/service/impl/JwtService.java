@@ -62,7 +62,7 @@ public class JwtService {
         String accessToken = Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("session_id", currentSessionId)
-                .claim("roles", userRoleService.findUserRoles(userId))
+                .claim("roles", userRoleService.findUserRoleNames(userId))
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(accessExpiration, ChronoUnit.SECONDS)))
                 .signWith(privateKey, Jwts.SIG.RS256)

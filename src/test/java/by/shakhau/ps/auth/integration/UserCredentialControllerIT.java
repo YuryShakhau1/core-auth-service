@@ -40,17 +40,6 @@ class UserCredentialControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
-    void shouldFindCurrentUserRoles() throws Exception {
-        UUID userId = UUID.randomUUID();
-
-        mockMvc.perform(get("/auth/users/me/roles")
-                        .header(USER_ID_HEADER, userId)
-                        .header(SESSION_ID_HEADER, SESSION_ID))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.roleNames").isArray());
-    }
-
-    @Test
     void shouldChangePassword() throws Exception {
         UserCredential user = createUser();
 

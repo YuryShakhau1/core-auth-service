@@ -59,7 +59,7 @@ class JwtServiceTest {
     @Test
     void shouldGenerateAccessTokenWhenUserExists() {
         UUID userId = UUID.randomUUID();
-        when(userRoleService.findUserRoles(userId)).thenReturn(List.of("ROLE_USER", "ROLE_ADMIN"));
+        when(userRoleService.findUserRoleNames(userId)).thenReturn(List.of("ROLE_USER", "ROLE_ADMIN"));
 
         JwtService.TokenInfo token = jwtService.generateAccessToken(userId);
 
@@ -73,7 +73,7 @@ class JwtServiceTest {
                 claims.getIssuedAt().toInstant(),
                 claims.getExpiration().toInstant());
         assertTrue(Math.abs(Duration.ofSeconds(ACCESS_EXPIRATION).toSeconds() - lifetime.toSeconds()) <= 1);
-        verify(userRoleService).findUserRoles(userId);
+        verify(userRoleService).findUserRoleNames(userId);
     }
 
     @Test
@@ -110,7 +110,7 @@ class JwtServiceTest {
     @Test
     void shouldReturnTrueWhenTokenIsValid() {
         UUID userId = UUID.randomUUID();
-        when(userRoleService.findUserRoles(userId)).thenReturn(List.of("ROLE_USER"));
+        when(userRoleService.findUserRoleNames(userId)).thenReturn(List.of("ROLE_USER"));
 
         JwtService.TokenInfo token = jwtService.generateAccessToken(userId);
 
@@ -125,7 +125,7 @@ class JwtServiceTest {
     @Test
     void shouldReturnClaimsWhenTokenIsValid() {
         UUID userId = UUID.randomUUID();
-        when(userRoleService.findUserRoles(userId)).thenReturn(List.of("ROLE_USER"));
+        when(userRoleService.findUserRoleNames(userId)).thenReturn(List.of("ROLE_USER"));
 
         JwtService.TokenInfo token = jwtService.generateAccessToken(userId);
 
@@ -148,7 +148,7 @@ class JwtServiceTest {
 
         var expiredJwtService = new JwtService(expiredProps, userRoleService);
         UUID userId = UUID.randomUUID();
-        when(userRoleService.findUserRoles(userId)).thenReturn(List.of("ROLE_USER"));
+        when(userRoleService.findUserRoleNames(userId)).thenReturn(List.of("ROLE_USER"));
 
         JwtService.TokenInfo token = expiredJwtService.generateAccessToken(userId);
 
@@ -158,7 +158,7 @@ class JwtServiceTest {
     @Test
     void shouldBeDeterministicWhenGeneratedWithSamePassword() {
         UUID userId = UUID.randomUUID();
-        when(userRoleService.findUserRoles(userId)).thenReturn(List.of("ROLE_USER"));
+        when(userRoleService.findUserRoleNames(userId)).thenReturn(List.of("ROLE_USER"));
 
         JwtService.TokenInfo tokenFromFirstService = jwtService.generateAccessToken(userId);
 

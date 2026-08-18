@@ -96,8 +96,6 @@ PRIVATE_KEY=MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCow35d2rcOBswcGiPI
 
 REDIS_SECRET_PASSWORD=redis_password
 
-ADMIN_INIT_SECRET=Admin_init_secret
-
 ## Application docker-compose
 
 docker-compose example

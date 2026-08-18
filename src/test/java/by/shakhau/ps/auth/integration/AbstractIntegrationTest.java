@@ -2,13 +2,16 @@ package by.shakhau.ps.auth.integration;
 
 import by.shakhau.ps.auth.config.SecurityProps;
 import by.shakhau.ps.auth.messaging.consumer.CreateUserConsumer;
+import by.shakhau.ps.auth.messaging.consumer.DeactivateUserCredentialsConsumer;
 import by.shakhau.ps.auth.messaging.consumer.UpdateUserConsumer;
 import by.shakhau.ps.auth.messaging.consumer.UpdateUserStatusConsumer;
+import by.shakhau.ps.auth.messaging.producer.CreatedUserCredentialsProducer;
 import by.shakhau.ps.auth.model.Role;
 import by.shakhau.ps.auth.model.UserCredential;
 import by.shakhau.ps.auth.repository.RefreshTokenRepository;
 import by.shakhau.ps.auth.repository.UserCredentialRepository;
 import by.shakhau.ps.auth.service.UserCredentialService;
+import by.shakhau.ps.auth.service.UserRoleService;
 import by.shakhau.ps.auth.service.impl.JwtService;
 import by.shakhau.ps.auth.service.model.UserInfo;
 import io.jsonwebtoken.Claims;
@@ -43,6 +46,8 @@ import static org.mockito.Mockito.when;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public abstract class AbstractIntegrationTest {
 
+    protected static final String USER_ID_PARAM = "userId";
+
     protected static final String PUBLIC_KEY = UUID.randomUUID().toString();
     protected static final String USER_ID = UUID.randomUUID().toString();
     protected static final String SESSION_ID = UUID.randomUUID().toString();
@@ -57,10 +62,16 @@ public abstract class AbstractIntegrationTest {
     private CreateUserConsumer createUserConsumer;
 
     @MockitoBean
+    private DeactivateUserCredentialsConsumer deactivateUserCredentialsConsumer;
+
+    @MockitoBean
     private UpdateUserConsumer updateUserConsumer;
 
     @MockitoBean
     private UpdateUserStatusConsumer userStatusConsumer;
+
+    @MockitoBean
+    private CreatedUserCredentialsProducer createdUserCredentialsProducer;
 
     @Autowired
     private UserCredentialRepository userCredentialRepository;
@@ -70,6 +81,9 @@ public abstract class AbstractIntegrationTest {
 
     @Autowired
     private UserCredentialService userCredentialService;
+
+    @Autowired
+    private UserRoleService userRoleService;
 
     @Autowired
     protected MockMvc mockMvc;
@@ -135,7 +149,7 @@ public abstract class AbstractIntegrationTest {
         userInfo.setActive(true);
         userInfo.setPasswordActive(true);
 
-        userCredentialService.registerExternalUser(userInfo, Role.ROLE_USER);
+        userCredentialService.registerExternalUser(userInfo, Role.ROLE_ADMIN);
         userCredentialService.updatePassword(userInfo.getUserId(), new StringBuilder("Password1!"));
 
         return userCredentialService.findByUserId(userInfo.getUserId());

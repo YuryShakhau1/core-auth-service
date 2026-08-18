@@ -115,7 +115,7 @@ class UserCredentialServiceImplTest {
         UserCredential newCredential = createCredential();
         UserCredential existingCredential = createCredential();
 
-        when(mapper.toUserCredential(userInfo)).thenReturn(newCredential);
+        when(mapper.toUserCredential(true, userInfo)).thenReturn(newCredential);
         when(passwordEncoder.encode(any(StringBuilder.class))).thenReturn("hash");
         when(repository.existsById(userId)).thenReturn(true);
         when(repository.findById(userId)).thenReturn(Optional.of(existingCredential));
@@ -134,7 +134,7 @@ class UserCredentialServiceImplTest {
         UserInfo userInfo = createUserInfo(userId);
         UserCredential credential = createCredential();
 
-        when(mapper.toUserCredential(userInfo)).thenReturn(credential);
+        when(mapper.toUserCredential(true, userInfo)).thenReturn(credential);
         when(passwordEncoder.encode(any(StringBuilder.class))).thenReturn("hash");
         when(repository.existsById(userId)).thenReturn(false);
 
@@ -153,7 +153,7 @@ class UserCredentialServiceImplTest {
         UserCredential newCredential = createCredential();
         UserCredential existingCredential = createCredential();
 
-        when(mapper.toUserCredential(userInfo)).thenReturn(newCredential);
+        when(mapper.toUserCredential(true, userInfo)).thenReturn(newCredential);
         when(passwordEncoder.encode(any(StringBuilder.class))).thenReturn("hash");
         when(repository.existsById(userId)).thenReturn(true);
         when(repository.findById(userId)).thenReturn(Optional.of(existingCredential));
@@ -172,7 +172,7 @@ class UserCredentialServiceImplTest {
         UserInfo userInfo = createUserInfo(null);
         UserCredential credential = createCredential();
 
-        when(mapper.toUserCredential(userInfo)).thenReturn(credential);
+        when(mapper.toUserCredential(true, userInfo)).thenReturn(credential);
         when(passwordEncoder.encode(any(StringBuilder.class))).thenReturn("hash");
 
         ResourceForbiddenException exception = assertThrows(ResourceForbiddenException.class, () ->

@@ -22,5 +22,4 @@ public class UserCreatedEvent {
     @JsonSerialize(using = SafePasswordSerializer.class)
     private StringBuilder tempPassword;
     private String role;
-    private Boolean active;
 }

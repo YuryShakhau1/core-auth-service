@@ -20,7 +20,14 @@ public interface RoleRepository extends JpaRepository<Role, UUID> {
             INNER JOIN user_credential_roles ur ON r.id = ur.role_id 
             WHERE ur.user_id = :userId
             """, nativeQuery = true)
-    List<String> findByUserId(UUID userId);
+    List<String> findNamesByUserId(UUID userId);
+
+    @Query(value = """
+            SELECT r.id, r.name FROM roles r 
+            INNER JOIN user_credential_roles ur ON r.id = ur.role_id 
+            WHERE ur.user_id = :userId
+            """, nativeQuery = true)
+    List<Role> findByUserId(UUID userId);
 
     @Query("SELECT r.id FROM Role r WHERE r.name = :name")
     Optional<Long> findIdByName(String name);

@@ -9,12 +9,6 @@ spring:
       hibernate:
         format_sql: true
 
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      password: ${REDIS_SECRET_PASSWORD}
-
   liquibase:
     change-log: classpath:/db/changelog/db.changelog-master.yml
     enabled: true
@@ -24,7 +18,6 @@ spring:
     access-expiration: ${JWT_ACCESS_EXPIRATION}
     refresh-expiration: ${JWT_PRIVATE_EXPIRATION}
     max-session-count: 5
-    admin-init-secret: ${ADMIN_INIT_SECRET}
 
   kafka:
     bootstrap-servers: ${KAFKA_HOST_PORT}
@@ -32,6 +25,7 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     consumer:
+      auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     listener:
@@ -39,4 +33,17 @@ spring:
       immediate-stop: true
 
   config:
-    import: optional:file:../.env[.properties]
+    import: optional:file:.env[.properties]
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+

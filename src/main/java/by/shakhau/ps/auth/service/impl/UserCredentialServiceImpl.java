@@ -42,7 +42,7 @@ public class UserCredentialServiceImpl implements UserCredentialService {
     @Transactional
     @Override
     public void registerExternalUser(UserInfo userInfo, String role) {
-        UserCredential userCredential = mapper.toUserCredential(userInfo);
+        UserCredential userCredential = mapper.toUserCredential(true, userInfo);
         userCredential.setPasswordHash(passwordEncoder.encode(userInfo.getPassword()));
         PasswordUtil.clearPassword(userInfo, userInfo.getPassword());
 

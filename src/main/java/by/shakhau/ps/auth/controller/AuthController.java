@@ -40,9 +40,6 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @AllArgsConstructor
 public class AuthController {
 
-    private static final String METHOD_REFRESH_TOKEN_URL = "/token/refresh";
-    public static final String REFRESH_TOKEN_URL = "/auth" + METHOD_REFRESH_TOKEN_URL;
-
     private final SecurityProps securityProps;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -51,6 +48,7 @@ public class AuthController {
 
     @PostMapping(value = "/login", consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
+        request.setEmail(request.getEmail().toLowerCase());
         UserShortCredential userCredential = userCredentialService.findByEmail(request.getEmail());
 
         var password = new StringBuilder().append(request.getPassword());
@@ -77,9 +75,9 @@ public class AuthController {
         return buildTokenResponse(accessToken.getToken(), refreshToken);
     }
 
-    @PostMapping(value = METHOD_REFRESH_TOKEN_URL, consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/token/refresh", produces = APPLICATION_JSON_VALUE)
     public ResponseEntity<TokenResponse> refreshToken(
-            @CookieValue(name = "refreshToken", required = false) String refreshToken) {
+            @CookieValue(name = "refreshToken") String refreshToken) {
         if (!jwtService.isTokenValid(refreshToken)) {
             throw new UnauthorizedException("Refresh token is invalid");
         }
@@ -104,7 +102,7 @@ public class AuthController {
 
         refreshTokenService.updateToken(userId, sessionId, generatedRefreshToken);
 
-        return buildTokenResponse(generatedAccessToken.getToken(), refreshToken);
+        return buildTokenResponse(generatedAccessToken.getToken(), generatedRefreshToken);
     }
 
     @PostMapping("/logout")
@@ -124,8 +122,8 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(true)
                 .sameSite("None")
-                .path(REFRESH_TOKEN_URL)
-                .maxAge(securityProps.getRefreshExpiration() * 1000 + 60 * 1000)
+                .path("/auth/token/refresh")
+                .maxAge((securityProps.getRefreshExpiration() + 60L) * 1000)
                 .build();
 
         return ResponseEntity

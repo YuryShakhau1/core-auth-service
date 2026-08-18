@@ -46,17 +46,14 @@ public class UserCredentialController {
         return ResponseEntity.ok(mapper.toGetUserResponse(userCredential));
     }
 
-    @GetMapping(value = "/me/roles", produces = APPLICATION_JSON_VALUE)
-    public ResponseEntity<UserRoleNameResponse> findCurrentUserRoles(
-            @AuthenticationPrincipal UserPrincipal principal) {
-        UUID userId = principal.getId();
-        return ResponseEntity.ok(new UserRoleNameResponse(userRoleService.findUserRoles(userId)));
-    }
-
     @PatchMapping(value = "/change-password", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         if (!PasswordUtil.equals(request.getNewPassword(), request.getRepeatNewPassword())) {
             throw new CustomValidationException("New password and repeat password must match");
+        }
+
+        if (PasswordUtil.equals(request.getPassword(), request.getNewPassword())) {
+            throw new CustomValidationException("Password and new password must be different");
         }
 
         PasswordUtil.clearPassword(request.getRepeatNewPassword());

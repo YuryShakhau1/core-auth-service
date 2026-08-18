@@ -15,7 +15,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.UUID;
 
-import static by.shakhau.ps.auth.controller.AuthController.REFRESH_TOKEN_URL;
 import static by.shakhau.ps.auth.controller.filter.AuthenticationFilter.SESSION_ID_HEADER;
 import static by.shakhau.ps.auth.controller.filter.AuthenticationFilter.USER_ID_HEADER;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,7 +54,7 @@ class AuthControllerIT extends AbstractIntegrationTest {
                 .andExpect(cookie().exists("refreshToken"))
                 .andExpect(cookie().httpOnly("refreshToken", true))
                 .andExpect(cookie().secure("refreshToken", true))
-                .andExpect(cookie().path("refreshToken", REFRESH_TOKEN_URL))
+                .andExpect(cookie().path("refreshToken", "/auth/token/refresh"))
                 .andExpect(cookie().maxAge("refreshToken", (int) securityProps.getRefreshExpiration() * 1000 + 60 * 1000))
 
                 .andExpect(jsonPath("$.accessToken").value("access-token"));
@@ -93,7 +92,7 @@ class AuthControllerIT extends AbstractIntegrationTest {
                 new TokenInfo("new-access", sessionId.toString()));
         when(jwtService.generateRefreshToken(userId, sessionId.toString())).thenReturn("new-refresh");
 
-        mockMvc.perform(post(REFRESH_TOKEN_URL)
+        mockMvc.perform(post("/auth/token/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .cookie(new Cookie("refreshToken", "refresh-token")))
                 .andExpect(status().isOk())
@@ -101,7 +100,7 @@ class AuthControllerIT extends AbstractIntegrationTest {
                 .andExpect(cookie().exists("refreshToken"))
                 .andExpect(cookie().httpOnly("refreshToken", true))
                 .andExpect(cookie().secure("refreshToken", true))
-                .andExpect(cookie().path("refreshToken", REFRESH_TOKEN_URL))
+                .andExpect(cookie().path("refreshToken", "/auth/token/refresh"))
                 .andExpect(cookie().maxAge("refreshToken", (int) securityProps.getRefreshExpiration() * 1000 + 60 * 1000))
 
                 .andExpect(jsonPath("$.accessToken").value("new-access"));

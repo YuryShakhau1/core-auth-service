@@ -21,7 +21,6 @@ public class UpdateUserConsumer {
     @KafkaListener(topics = TOPIC, groupId = "user-service")
     public void consume(UserUpdatedEvent event, Acknowledgment ack) {
         UserInfo userInfo = userEventMapper.toUserInfo(event);
-        userInfo.setPasswordActive(false);
         userCredentialService.update(userInfo);
 
         ack.acknowledge();
