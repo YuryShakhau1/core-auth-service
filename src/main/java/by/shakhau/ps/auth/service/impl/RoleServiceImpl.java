@@ -1,5 +1,6 @@
 package by.shakhau.ps.auth.service.impl;
 
+import by.shakhau.ps.auth.model.Role;
 import by.shakhau.ps.auth.repository.RoleRepository;
 import by.shakhau.ps.auth.service.RoleService;
 import by.shakhau.ps.auth.service.exception.ResourceNotFoundException;
@@ -17,12 +18,22 @@ public class RoleServiceImpl implements RoleService {
     private final RoleRepository repository;
 
     @Override
-    public List<String> findAll() {
+    public List<String> findAllRoleNames() {
         return repository.findAllRoleNames();
     }
 
     @Override
-    public List<String> findByUserId(UUID userId) {
+    public List<Role> findAll() {
+        return repository.findAll();
+    }
+
+    @Override
+    public List<String> findNamesByUserId(UUID userId) {
+        return repository.findNamesByUserId(userId);
+    }
+
+    @Override
+    public List<Role> findByUserId(UUID userId) {
         return repository.findByUserId(userId);
     }
 

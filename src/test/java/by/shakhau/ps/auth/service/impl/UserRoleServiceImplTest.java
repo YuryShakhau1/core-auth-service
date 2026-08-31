@@ -1,5 +1,6 @@
 package by.shakhau.ps.auth.service.impl;
 
+import by.shakhau.ps.auth.model.Role;
 import by.shakhau.ps.auth.repository.UserCredentialRepository;
 import by.shakhau.ps.auth.service.RoleService;
 import org.junit.jupiter.api.Test;
@@ -29,16 +30,16 @@ class UserRoleServiceImplTest {
     private UserRoleServiceImpl service;
 
     @Test
-    void shouldReturnUserRolesWhenFindUserRolesIsCalled() {
+    void shouldReturnUserRolesWhenFindUserRoleNamesIsCalled() {
         UUID userId = UUID.randomUUID();
         List<String> roles = List.of("ROLE_USER", "ROLE_ADMIN");
 
-        when(roleService.findByUserId(userId)).thenReturn(roles);
+        when(roleService.findNamesByUserId(userId)).thenReturn(roles);
 
-        List<String> result = service.findUserRoles(userId);
+        List<String> result = service.findUserRoleNames(userId);
 
         assertEquals(roles, result);
-        verify(roleService).findByUserId(userId);
+        verify(roleService).findNamesByUserId(userId);
     }
 
     @Test
@@ -71,17 +72,19 @@ class UserRoleServiceImplTest {
     @Test
     void shouldAddAllUserRolesWhenRoleNamesAreProvided() {
         UUID userId = UUID.randomUUID();
-        List<String> roles = List.of("ROLE_USER", "ROLE_ADMIN");
+        var userRole = new Role(1L, "ROLE_USER");
+        var adminRole = new Role(2L, "ROLE_ADMIN");
+        List<Role> roles = List.of(userRole, adminRole);
 
-        when(roleService.findIdByName("ROLE_USER")).thenReturn(1L);
-        when(roleService.findIdByName("ROLE_ADMIN")).thenReturn(2L);
+        when(roleService.findAll()).thenReturn(roles);
+        when(roleService.findByUserId(userId)).thenReturn(List.of(userRole));
 
-        service.addUserRoles(userId, roles);
+        service.updateUserRoles(userId, List.of("ROLE_ADMIN"));
 
-        verify(roleService).findIdByName("ROLE_USER");
-        verify(roleService).findIdByName("ROLE_ADMIN");
-        verify(repository).addUserRole(userId, 1L);
+        verify(roleService).findAll();
+        verify(roleService).findByUserId(userId);
         verify(repository).addUserRole(userId, 2L);
+        verify(repository).deleteUserRoles(userId, List.of(1L));
     }
 
     @Test

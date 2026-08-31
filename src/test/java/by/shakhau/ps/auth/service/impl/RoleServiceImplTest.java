@@ -1,5 +1,6 @@
 package by.shakhau.ps.auth.service.impl;
 
+import by.shakhau.ps.auth.model.Role;
 import by.shakhau.ps.auth.repository.RoleRepository;
 import by.shakhau.ps.auth.service.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.Test;
@@ -28,15 +29,29 @@ class RoleServiceImplTest {
     private RoleServiceImpl service;
 
     @Test
-    void shouldReturnAllRoleNamesWhenFindAllIsCalled() {
+    void shouldReturnAllRoleNamesWhenFindAllRoleNamesIsCalled() {
         List<String> roles = List.of("ROLE_USER", "ROLE_ADMIN");
 
         when(repository.findAllRoleNames()).thenReturn(roles);
 
-        List<String> result = service.findAll();
+        List<String> result = service.findAllRoleNames();
 
         assertEquals(roles, result);
         verify(repository).findAllRoleNames();
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void shouldReturnAllRolesWhenFindAllRoleNamesIsCalled() {
+        List<Role> roles = List.of(
+                new Role(1L, "ROLE_USER"), new Role(2L, "ROLE_ADMIN"));
+
+        when(repository.findAll()).thenReturn(roles);
+
+        List<Role> result = service.findAll();
+
+        assertEquals(roles, result);
+        verify(repository).findAll();
         verifyNoMoreInteractions(repository);
     }
 
@@ -45,12 +60,12 @@ class RoleServiceImplTest {
         UUID userId = UUID.randomUUID();
         List<String> roles = List.of("ROLE_USER");
 
-        when(repository.findByUserId(userId)).thenReturn(roles);
+        when(repository.findNamesByUserId(userId)).thenReturn(roles);
 
-        List<String> result = service.findByUserId(userId);
+        List<String> result = service.findNamesByUserId(userId);
 
         assertEquals(roles, result);
-        verify(repository).findByUserId(userId);
+        verify(repository).findNamesByUserId(userId);
         verifyNoMoreInteractions(repository);
     }
 

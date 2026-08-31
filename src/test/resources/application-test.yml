@@ -6,12 +6,6 @@ spring:
     activate:
       on-profile: local
 
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      password: ${REDIS_SECRET_PASSWORD}
-
   datasource:
     url: jdbc:postgresql://localhost:${AUTH_SERVICE_DB_PORT}/${AUTH_SERVICE_DB_NAME:auth_db}
     username: ${AUTH_SERVICE_DB_USERNAME:db_username}

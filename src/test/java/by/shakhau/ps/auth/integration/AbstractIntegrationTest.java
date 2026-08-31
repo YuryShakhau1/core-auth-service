@@ -2,18 +2,19 @@ package by.shakhau.ps.auth.integration;
 
 import by.shakhau.ps.auth.config.SecurityProps;
 import by.shakhau.ps.auth.messaging.consumer.CreateUserConsumer;
+import by.shakhau.ps.auth.messaging.consumer.DeactivateUserCredentialsConsumer;
 import by.shakhau.ps.auth.messaging.consumer.UpdateUserConsumer;
 import by.shakhau.ps.auth.messaging.consumer.UpdateUserStatusConsumer;
-import by.shakhau.ps.auth.messaging.producer.UserRegistrationProducer;
+import by.shakhau.ps.auth.messaging.producer.CreatedUserCredentialsProducer;
 import by.shakhau.ps.auth.model.Role;
 import by.shakhau.ps.auth.model.UserCredential;
 import by.shakhau.ps.auth.repository.RefreshTokenRepository;
 import by.shakhau.ps.auth.repository.UserCredentialRepository;
 import by.shakhau.ps.auth.service.UserCredentialService;
+import by.shakhau.ps.auth.service.UserRoleService;
 import by.shakhau.ps.auth.service.impl.JwtService;
 import by.shakhau.ps.auth.service.model.UserInfo;
 import io.jsonwebtoken.Claims;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -45,10 +46,11 @@ import static org.mockito.Mockito.when;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public abstract class AbstractIntegrationTest {
 
-    protected static final String AUTHORIZATION_HEADER = "Bearer 123";
+    protected static final String USER_ID_PARAM = "userId";
+
+    protected static final String PUBLIC_KEY = UUID.randomUUID().toString();
     protected static final String USER_ID = UUID.randomUUID().toString();
-    protected static final String ADMIN_SECRET = UUID.randomUUID().toString();
-    protected static final String ADMIN_SECRET_HASH = DigestUtils.sha256Hex(ADMIN_SECRET);
+    protected static final String SESSION_ID = UUID.randomUUID().toString();
 
     @MockitoBean
     protected JwtService jwtService;
@@ -60,13 +62,16 @@ public abstract class AbstractIntegrationTest {
     private CreateUserConsumer createUserConsumer;
 
     @MockitoBean
+    private DeactivateUserCredentialsConsumer deactivateUserCredentialsConsumer;
+
+    @MockitoBean
     private UpdateUserConsumer updateUserConsumer;
 
     @MockitoBean
     private UpdateUserStatusConsumer userStatusConsumer;
 
     @MockitoBean
-    private UserRegistrationProducer userRegistrationProducer;
+    private CreatedUserCredentialsProducer createdUserCredentialsProducer;
 
     @Autowired
     private UserCredentialRepository userCredentialRepository;
@@ -76,6 +81,9 @@ public abstract class AbstractIntegrationTest {
 
     @Autowired
     private UserCredentialService userCredentialService;
+
+    @Autowired
+    private UserRoleService userRoleService;
 
     @Autowired
     protected MockMvc mockMvc;
@@ -111,10 +119,11 @@ public abstract class AbstractIntegrationTest {
 
         when(claims.getExpiration()).thenReturn(new Date(System.currentTimeMillis() + 1000000));
         when(claims.getSubject()).thenReturn(USER_ID);
+        when(claims.get("session_id")).thenReturn(SESSION_ID);
         when((List<String>) claims.get("roles")).thenReturn(Collections.singletonList("ROLE_ADMIN"));
         when(jwtService.getClaims(any())).thenReturn(claims);
+        when(jwtService.getPublicKeyAsString()).thenReturn(PUBLIC_KEY);
 
-        when(securityProps.getAdminInitSecretHash()).thenReturn(ADMIN_SECRET_HASH);
         when(securityProps.getMaxSessionCount()).thenReturn(5);
     }
 
@@ -131,14 +140,18 @@ public abstract class AbstractIntegrationTest {
     protected UserCredential createUser() {
         var userInfo = new UserInfo();
 
+        userInfo.setUserId(UUID.randomUUID());
         userInfo.setFirstName("Ivan");
         userInfo.setLastName("Ivanov");
         userInfo.setBirthDate(LocalDate.of(1995, 1, 1));
         userInfo.setEmail("ivan@test.com");
-        userInfo.setPassword(new StringBuilder("Password1!"));
+        userInfo.setPassword(new StringBuilder("Password2!"));
         userInfo.setActive(true);
         userInfo.setPasswordActive(true);
 
-        return userCredentialService.registerUser(userInfo, Role.ROLE_USER);
+        userCredentialService.registerExternalUser(userInfo, Role.ROLE_ADMIN);
+        userCredentialService.updatePassword(userInfo.getUserId(), new StringBuilder("Password1!"));
+
+        return userCredentialService.findByUserId(userInfo.getUserId());
     }
 }

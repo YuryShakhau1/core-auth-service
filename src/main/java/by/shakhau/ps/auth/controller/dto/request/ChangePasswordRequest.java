@@ -22,24 +22,10 @@ public class ChangePasswordRequest implements Password {
     private String email;
 
     @NotBlank(message = "Password is required")
-    @Pattern(
-            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@#$%^&+=!]).*$",
-            message = """
-                      Password must contain at least one lowercase letter, 
-                      one uppercase letter, 
-                      one digit, 
-                      and one special character
-                      """
-    )
     @Size(min = 7, max = 100, message = "Password must be between 7 and 100 characters")
     @JsonDeserialize(using = SafePasswordDeserializer.class)
     @JsonSerialize(using = SafePasswordSerializer.class)
     private StringBuilder password;
-
-    @NotBlank(message = "Repeat password is required")
-    @JsonDeserialize(using = SafePasswordDeserializer.class)
-    @JsonSerialize(using = SafePasswordSerializer.class)
-    private StringBuilder repeatPassword;
 
     @NotBlank(message = "New password is required")
     @Pattern(
@@ -55,4 +41,9 @@ public class ChangePasswordRequest implements Password {
     @JsonDeserialize(using = SafePasswordDeserializer.class)
     @JsonSerialize(using = SafePasswordSerializer.class)
     private StringBuilder newPassword;
+
+    @NotBlank(message = "Repeat new password is required")
+    @JsonDeserialize(using = SafePasswordDeserializer.class)
+    @JsonSerialize(using = SafePasswordSerializer.class)
+    private StringBuilder repeatNewPassword;
 }

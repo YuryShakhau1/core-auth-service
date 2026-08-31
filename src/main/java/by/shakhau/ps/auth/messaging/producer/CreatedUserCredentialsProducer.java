@@ -1,19 +1,19 @@
 package by.shakhau.ps.auth.messaging.producer;
 
-import by.shakhau.ps.auth.messaging.event.UserRegisteredEvent;
+import by.shakhau.ps.auth.messaging.event.UserCredentialsCreatedEvent;
 import by.shakhau.ps.auth.messaging.exception.KafkaConnectionException;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
-@AllArgsConstructor
-public class UserRegistrationProducer {
+@RequiredArgsConstructor
+public class CreatedUserCredentialsProducer {
 
-    private static final String TOPIC = "user.registered";
-    private final KafkaTemplate<String, UserRegisteredEvent> template;
+    private static final String TOPIC = "user.credentials.created";
+    private final KafkaTemplate<String, UserCredentialsCreatedEvent> template;
 
-    public void send(UserRegisteredEvent event) {
+    public void send(UserCredentialsCreatedEvent event) {
         try {
             template.send(TOPIC, event.getUserId().toString(), event).get();
         } catch (Exception e) {

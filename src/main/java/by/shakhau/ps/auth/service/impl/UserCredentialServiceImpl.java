@@ -1,21 +1,18 @@
 package by.shakhau.ps.auth.service.impl;
 
 import by.shakhau.ps.auth.mapper.UserCredentialMapper;
-import by.shakhau.ps.auth.messaging.event.UserRegisteredEvent;
-import by.shakhau.ps.auth.messaging.mapper.UserEventMapper;
-import by.shakhau.ps.auth.messaging.producer.UserRegistrationProducer;
 import by.shakhau.ps.auth.model.UserCredential;
 import by.shakhau.ps.auth.model.UserShortCredential;
 import by.shakhau.ps.auth.repository.UserCredentialRepository;
 import by.shakhau.ps.auth.repository.UserShortCredentialRepository;
 import by.shakhau.ps.auth.service.UserCredentialService;
 import by.shakhau.ps.auth.service.UserRoleService;
+import by.shakhau.ps.auth.service.exception.ResourceForbiddenException;
 import by.shakhau.ps.auth.service.exception.ResourceNotFoundException;
 import by.shakhau.ps.auth.service.model.UserInfo;
 import by.shakhau.ps.auth.util.PasswordUtil;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -23,21 +20,17 @@ import java.util.UUID;
 
 @Service
 @AllArgsConstructor
-@Slf4j
 public class UserCredentialServiceImpl implements UserCredentialService {
 
     private final PasswordEncoder passwordEncoder;
-    private final UserRegistrationProducer userRegistrationProducer;
     private final UserRoleService userRoleService;
-    private final UserEventMapper userEventMapper;
     private final UserCredentialMapper mapper;
     private final UserCredentialRepository repository;
     private final UserShortCredentialRepository shortRepository;
 
     @Override
     public UserShortCredential findByEmail(String email) {
-        return shortRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User with email %s not found".formatted(email)));
+        return shortRepository.findByEmail(email).orElse(null);
     }
 
     @Override
@@ -48,8 +41,8 @@ public class UserCredentialServiceImpl implements UserCredentialService {
 
     @Transactional
     @Override
-    public UserCredential registerUser(UserInfo userInfo, String role) {
-        UserCredential userCredential = mapper.toUserCredential(userInfo);
+    public void registerExternalUser(UserInfo userInfo, String role) {
+        UserCredential userCredential = mapper.toUserCredential(true, userInfo);
         userCredential.setPasswordHash(passwordEncoder.encode(userInfo.getPassword()));
         PasswordUtil.clearPassword(userInfo, userInfo.getPassword());
 
@@ -62,28 +55,16 @@ public class UserCredentialServiceImpl implements UserCredentialService {
                 credentialFound.setPasswordHash(userCredential.getPasswordHash());
                 repository.save(credentialFound);
             } else {
-                repository.insertUser(userCredential);
+                repository.insertIfDoesNotExist(userCredential);
             }
         } else {
-            userCredential = repository.save(userCredential);
-            userId = userCredential.getUserId();
+            throw new ResourceForbiddenException("External user must have id");
         }
 
-        try {
-            userRoleService.addUserRole(userId, role);
-        } catch (ResourceNotFoundException e) {
-            log.warn(e.getMessage(), e);
-        }
-
-        if (userInfo.getUserId() == null) {
-            userInfo.setUserId(userId);
-            UserRegisteredEvent event = userEventMapper.toUserRegisteredEvent(userInfo);
-            userRegistrationProducer.send(event);
-        }
-
-        return userCredential;
+        userRoleService.addUserRole(userId, role);
     }
 
+    @Transactional
     @Override
     public void update(UserInfo userInfo) {
         UserCredential credential = repository.findById(userInfo.getUserId())

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.UUID;
 
 public interface UserCredentialRepository extends JpaRepository<UserCredential, UUID> {
@@ -31,7 +32,7 @@ public interface UserCredentialRepository extends JpaRepository<UserCredential, 
             WHERE NOT EXISTS (SELECT 1 FROM user_credentials WHERE email = :#{#u.email} OR user_id = :#{#u.userId})
             """,
             nativeQuery = true)
-    void insertUser(@Param("u") UserCredential userCredential);
+    void insertIfDoesNotExist(@Param("u") UserCredential userCredential);
 
     @Modifying
     @Query(value = """
@@ -44,9 +45,17 @@ public interface UserCredentialRepository extends JpaRepository<UserCredential, 
 
     @Modifying
     @Query(value = """
-            DELETE FROM user_credential_roles WHERE userId = :userId AND roleId = :roleId
+            DELETE FROM user_credential_roles WHERE user_id = :userId AND role_id = :roleId
             """,
             nativeQuery = true
     )
     void deleteUserRole(UUID userId, Long roleId);
+
+    @Modifying
+    @Query(value = """
+            DELETE FROM user_credential_roles WHERE user_id = :userId AND role_id IN :roleIds
+            """,
+            nativeQuery = true
+    )
+    void deleteUserRoles(UUID userId, Collection<Long> roleIds);
 }

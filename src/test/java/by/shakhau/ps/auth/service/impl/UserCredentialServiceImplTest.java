@@ -2,12 +2,12 @@ package by.shakhau.ps.auth.service.impl;
 
 import by.shakhau.ps.auth.mapper.UserCredentialMapper;
 import by.shakhau.ps.auth.messaging.mapper.UserEventMapper;
-import by.shakhau.ps.auth.messaging.producer.UserRegistrationProducer;
 import by.shakhau.ps.auth.model.UserCredential;
 import by.shakhau.ps.auth.model.UserShortCredential;
 import by.shakhau.ps.auth.repository.UserCredentialRepository;
 import by.shakhau.ps.auth.repository.UserShortCredentialRepository;
 import by.shakhau.ps.auth.service.UserRoleService;
+import by.shakhau.ps.auth.service.exception.ResourceForbiddenException;
 import by.shakhau.ps.auth.service.exception.ResourceNotFoundException;
 import by.shakhau.ps.auth.service.model.UserInfo;
 import org.junit.jupiter.api.Test;
@@ -22,11 +22,12 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,9 +35,6 @@ class UserCredentialServiceImplTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private UserRegistrationProducer userRegistrationProducer;
 
     @Mock
     private UserRoleService userRoleService;
@@ -72,15 +70,14 @@ class UserCredentialServiceImplTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenEmailDoesNotExist() {
+    void shouldReturnNullEmailDoesNotExist() {
         String email = "unknown@test.com";
 
         when(shortRepository.findByEmail(email)).thenReturn(Optional.empty());
 
-        ResourceNotFoundException exception =
-                assertThrows(ResourceNotFoundException.class, () -> service.findByEmail(email));
+        UserShortCredential result = service.findByEmail(email);
 
-        assertEquals("User with email %s not found".formatted(email), exception.getMessage());
+        assertNull(result);
         verify(shortRepository).findByEmail(email);
     }
 
@@ -112,91 +109,78 @@ class UserCredentialServiceImplTest {
     }
 
     @Test
-    void shouldRegisterNewUserWhenUserIdIsNull() {
-        UserInfo userInfo = createUserInfo(null);
-        UserCredential credential = createCredential();
-
-        UUID userId = UUID.randomUUID();
-
-        when(mapper.toUserCredential(userInfo)).thenReturn(credential);
-
-        when(passwordEncoder.encode(any(StringBuilder.class))).thenReturn("hash");
-
-        when(repository.save(credential))
-                .thenAnswer(invocation -> {
-                    credential.setUserId(userId);
-                    return credential;
-                });
-
-        service.registerUser(userInfo, "ROLE_USER");
-
-        assertEquals(userId, userInfo.getUserId());
-        assertEquals("hash", credential.getPasswordHash());
-        verify(repository).save(credential);
-        verify(userRoleService).addUserRole(userId, "ROLE_USER");
-        verify(userEventMapper).toUserRegisteredEvent(userInfo);
-        verify(userRegistrationProducer).send(any());
-    }
-
-    @Test
-    void shouldInsertUserWhenUserIdExistsButCredentialDoesNotExist() {
-        UUID userId = UUID.randomUUID();
-        UserInfo userInfo = createUserInfo(userId);
-        UserCredential credential = createCredential();
-
-        when(mapper.toUserCredential(userInfo)).thenReturn(credential);
-        when(passwordEncoder.encode(any(StringBuilder.class))).thenReturn("hash");
-        when(repository.existsById(userId)).thenReturn(false);
-
-        service.registerUser(userInfo, "ROLE_USER");
-
-        assertFalse(credential.getPasswordActive());
-        verify(repository).insertUser(credential);
-        verify(repository, never()).save(any());
-        verify(userRegistrationProducer, never()).send(any());
-    }
-
-    @Test
-    void shouldUpdateExistingCredentialWhenUserAlreadyExists() {
+    void shouldUpdateExistingCredentialWhenUserFromExternalSystem() {
         UUID userId = UUID.randomUUID();
         UserInfo userInfo = createUserInfo(userId);
         UserCredential newCredential = createCredential();
         UserCredential existingCredential = createCredential();
 
-        when(mapper.toUserCredential(userInfo)).thenReturn(newCredential);
+        when(mapper.toUserCredential(true, userInfo)).thenReturn(newCredential);
         when(passwordEncoder.encode(any(StringBuilder.class))).thenReturn("hash");
         when(repository.existsById(userId)).thenReturn(true);
         when(repository.findById(userId)).thenReturn(Optional.of(existingCredential));
 
-        service.registerUser(userInfo, "ROLE_USER");
+        service.registerExternalUser(userInfo, "ROLE_USER");
 
         assertFalse(existingCredential.getPasswordActive());
         assertEquals("hash", existingCredential.getPasswordHash());
         verify(repository).save(existingCredential);
-        verify(repository, never()).insertUser(any());
+        verify(repository, never()).insertIfDoesNotExist(any());
     }
 
     @Test
-    void shouldContinueRegistrationWhenRoleDoesNotExist() {
+    void shouldInsertCredentialWhenExternalUserIdExistsButCredentialDoesNotExist() {
+        UUID userId = UUID.randomUUID();
+        UserInfo userInfo = createUserInfo(userId);
+        UserCredential credential = createCredential();
+
+        when(mapper.toUserCredential(true, userInfo)).thenReturn(credential);
+        when(passwordEncoder.encode(any(StringBuilder.class))).thenReturn("hash");
+        when(repository.existsById(userId)).thenReturn(false);
+
+        service.registerExternalUser(userInfo, "ROLE_USER");
+
+        assertFalse(credential.getPasswordActive());
+        verify(repository).insertIfDoesNotExist(credential);
+        verify(repository, never()).save(any());
+        verify(userRoleService).addUserRole(userId, "ROLE_USER");
+    }
+
+    @Test
+    void shouldUpdateExistingCredentialWhenExternalUserAlreadyExists() {
+        UUID userId = UUID.randomUUID();
+        UserInfo userInfo = createUserInfo(userId);
+        UserCredential newCredential = createCredential();
+        UserCredential existingCredential = createCredential();
+
+        when(mapper.toUserCredential(true, userInfo)).thenReturn(newCredential);
+        when(passwordEncoder.encode(any(StringBuilder.class))).thenReturn("hash");
+        when(repository.existsById(userId)).thenReturn(true);
+        when(repository.findById(userId)).thenReturn(Optional.of(existingCredential));
+
+        service.registerExternalUser(userInfo, "ROLE_USER");
+
+        assertFalse(existingCredential.getPasswordActive());
+        assertEquals("hash", existingCredential.getPasswordHash());
+        verify(repository).save(existingCredential);
+        verify(repository, never()).insertIfDoesNotExist(any());
+        verify(userRoleService).addUserRole(userId, "ROLE_USER");
+    }
+
+    @Test
+    void shouldThrowExceptionWhenExternalUserDoesNotHaveId() {
         UserInfo userInfo = createUserInfo(null);
         UserCredential credential = createCredential();
-        UUID userId = UUID.randomUUID();
 
-        when(mapper.toUserCredential(userInfo)).thenReturn(credential);
+        when(mapper.toUserCredential(true, userInfo)).thenReturn(credential);
         when(passwordEncoder.encode(any(StringBuilder.class))).thenReturn("hash");
-        when(repository.save(credential))
-                .thenAnswer(invocation -> {
-                    credential.setUserId(userId);
-                    return credential;
-                });
-        doThrow(new ResourceNotFoundException("Role not found"))
-                .when(userRoleService)
-                .addUserRole(userId, "ROLE_TEST");
 
-        UserCredential result = service.registerUser(userInfo, "ROLE_TEST");
+        ResourceForbiddenException exception = assertThrows(ResourceForbiddenException.class, () ->
+                service.registerExternalUser(userInfo, "ROLE_USER"));
 
-        assertEquals(credential, result);
-        verify(userRegistrationProducer).send(any());
+        assertEquals("External user must have id", exception.getMessage());
+        verifyNoInteractions(repository);
+        verifyNoInteractions(userRoleService);
     }
 
     @Test

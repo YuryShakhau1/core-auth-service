@@ -19,6 +19,6 @@ public class RoleController {
 
     @GetMapping(produces = APPLICATION_JSON_VALUE)
     public ResponseEntity<UserRoleNameResponse> findAllRoles() {
-        return ResponseEntity.ok(new UserRoleNameResponse(service.findAll()));
+        return ResponseEntity.ok(new UserRoleNameResponse(service.findAllRoleNames()));
     }
 }

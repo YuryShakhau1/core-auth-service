@@ -1,5 +1,6 @@
 package by.shakhau.ps.auth.service.impl;
 
+import by.shakhau.ps.auth.config.SecurityProps;
 import by.shakhau.ps.auth.model.RefreshToken;
 import by.shakhau.ps.auth.repository.RefreshTokenRepository;
 import io.jsonwebtoken.Claims;
@@ -29,6 +30,9 @@ class RefreshTokenServiceImplTest {
     private static final String TOKEN_HASH = UUID.randomUUID().toString();
     private static final String REFRESH_TOKEN = UUID.randomUUID().toString();
     private static final String NEW_REFRESH_TOKEN = UUID.randomUUID().toString();
+
+    @Mock
+    private SecurityProps securityProps;
 
     @Mock
     private JwtService jwtService;
@@ -100,11 +104,11 @@ class RefreshTokenServiceImplTest {
         UUID userId = UUID.randomUUID();
         UUID sessionId = UUID.randomUUID();
 
+        when(securityProps.getRefreshExpiration()).thenReturn(900L);
         when(jwtService.getClaims(REFRESH_TOKEN)).thenReturn(claims);
         when(claims.get("session_id")).thenReturn(sessionId.toString());
 
-        ArgumentCaptor<RefreshToken> tokenCaptor =
-                ArgumentCaptor.forClass(RefreshToken.class);
+        ArgumentCaptor<RefreshToken> tokenCaptor = ArgumentCaptor.forClass(RefreshToken.class);
 
         service.save(userId, REFRESH_TOKEN);
 
